@@ -17,7 +17,7 @@ from .windows_integration import (
 def _startup_target() -> Path:
     if getattr(sys, "frozen", False):
         return Path(sys.executable)
-    return Path(__file__).resolve()
+    return Path(__file__).resolve().parents[2] / "run.bat"
 
 
 def main() -> int:

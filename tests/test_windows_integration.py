@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 import floating_link_dock.windows_integration as wi
+from floating_link_dock.main import _startup_target
 
 
 class MemoryRegistry:
@@ -128,3 +129,10 @@ def test_second_instance_fails_lock_and_signals_existing_instance() -> None:
     assert signals == ["activate"]
     assert api.closed == [42]
     first.close()
+
+
+def test_source_startup_target_uses_project_launcher() -> None:
+    target = _startup_target()
+
+    assert target.name == "run.bat"
+    assert target.parent == Path(__file__).resolve().parents[1]
