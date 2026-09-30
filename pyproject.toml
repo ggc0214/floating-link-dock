@@ -9,7 +9,7 @@ description = "A lightweight Windows floating dock for frequently used links"
 requires-python = ">=3.11"
 dependencies = [
   "customtkinter==5.2.2",
-  "Pillow==11.3.0",
+  "Pillow==12.3.0",
 ]
 
 [tool.setuptools]

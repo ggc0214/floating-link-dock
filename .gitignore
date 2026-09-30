@@ -11,3 +11,5 @@ dist/
 .worktrees/
 *.log
 *.tmp
+.ui-test-data/
+.ui-debug.*.log
