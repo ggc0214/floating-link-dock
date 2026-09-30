@@ -27,15 +27,25 @@ def normalize_url(raw: str) -> str:
     if not value:
         raise LinkValidationError("请输入网址")
 
-    parsed_before_prefix = urlparse(value)
+    try:
+        parsed_before_prefix = urlparse(value)
+    except ValueError as exc:
+        raise LinkValidationError("请输入完整的网站域名") from exc
     if not parsed_before_prefix.scheme:
         value = f"https://{value}"
 
-    parsed = urlparse(value)
+    try:
+        parsed = urlparse(value)
+    except ValueError as exc:
+        raise LinkValidationError("请输入完整的网站域名") from exc
     scheme = parsed.scheme.lower()
     if scheme not in {"http", "https"}:
         raise LinkValidationError("仅支持 http 或 https 网址")
-    if not parsed.hostname or not _has_public_style_host(parsed.hostname):
+    try:
+        hostname = parsed.hostname
+    except ValueError as exc:
+        raise LinkValidationError("请输入完整的网站域名") from exc
+    if not hostname or not _has_public_style_host(hostname):
         raise LinkValidationError("请输入完整的网站域名")
 
     return urlunparse(parsed._replace(scheme=scheme))

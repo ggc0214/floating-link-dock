@@ -10,7 +10,7 @@ from typing import Callable, Protocol
 
 import winreg
 
-from .geometry import Rect
+from .geometry import Point, Rect
 from .link_service import LinkValidationError, normalize_url
 
 
@@ -55,17 +55,26 @@ class _MonitorInfo(ctypes.Structure):
     ]
 
 
-def get_cursor_work_area() -> Rect:
+def get_work_area_for_point(point: Point) -> Rect:
     user32 = ctypes.windll.user32
-    point = _Point()
-    if not user32.GetCursorPos(ctypes.byref(point)):
-        raise IntegrationError("无法获取鼠标所在屏幕")
-    monitor = user32.MonitorFromPoint(point, 2)
+    user32.MonitorFromPoint.argtypes = [_Point, wintypes.DWORD]
+    user32.MonitorFromPoint.restype = wintypes.HANDLE
+    user32.GetMonitorInfoW.argtypes = [wintypes.HANDLE, ctypes.POINTER(_MonitorInfo)]
+    user32.GetMonitorInfoW.restype = wintypes.BOOL
+    monitor = user32.MonitorFromPoint(_Point(point.x, point.y), 2)
     info = _MonitorInfo(cbSize=ctypes.sizeof(_MonitorInfo))
     if not monitor or not user32.GetMonitorInfoW(monitor, ctypes.byref(info)):
         raise IntegrationError("无法获取屏幕工作区域")
     work = info.rcWork
     return Rect(work.left, work.top, work.right, work.bottom)
+
+
+def get_cursor_work_area() -> Rect:
+    user32 = ctypes.windll.user32
+    point = _Point()
+    if not user32.GetCursorPos(ctypes.byref(point)):
+        raise IntegrationError("无法获取鼠标所在屏幕")
+    return get_work_area_for_point(Point(point.x, point.y))
 
 
 def _query_client_area_animation() -> bool:

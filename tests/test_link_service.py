@@ -38,6 +38,11 @@ def test_rejects_missing_host(url: str) -> None:
         normalize_url(url)
 
 
+def test_malformed_ipv6_is_reported_as_link_validation_error() -> None:
+    with pytest.raises(LinkValidationError, match="完整"):
+        normalize_url("https://[")
+
+
 def test_derives_name_from_hostname() -> None:
     assert derive_name("https://www.example.com/path") == "example.com"
     assert validate_link("", "example.com").name == "example.com"

@@ -17,6 +17,7 @@ from .windows_integration import (
     IntegrationError,
     StartupManager,
     get_cursor_work_area,
+    get_work_area_for_point,
     open_in_default_browser,
     system_reduces_motion,
 )
@@ -55,8 +56,10 @@ class FloatingDockWindow(ctk.CTk):
         self._render_collapsed()
         self.after(50, self._show_warnings)
 
-    def _work_area(self) -> Rect:
+    def _work_area(self, point: Point | None = None) -> Rect:
         try:
+            if point is not None:
+                return get_work_area_for_point(point)
             return get_cursor_work_area()
         except IntegrationError:
             return Rect(0, 0, self.winfo_screenwidth(), self.winfo_screenheight())
@@ -71,7 +74,7 @@ class FloatingDockWindow(ctk.CTk):
         origin = clamp_window(
             self._collapsed_origin,
             (theme.COLLAPSED_SIZE, theme.COLLAPSED_SIZE),
-            self._work_area(),
+            self._work_area(self._collapsed_origin),
         )
         self._collapsed_origin = origin
         self.geometry(
@@ -227,7 +230,7 @@ class FloatingDockWindow(ctk.CTk):
         placement = choose_expansion(
             anchor,
             (theme.PANEL_WIDTH, theme.PANEL_HEIGHT),
-            self._work_area(),
+            self._work_area(Point(anchor.left, anchor.top)),
         )
         self.geometry(
             f"{theme.PANEL_WIDTH}x{theme.PANEL_HEIGHT}+{placement.origin.x}+{placement.origin.y}"
@@ -262,7 +265,7 @@ class FloatingDockWindow(ctk.CTk):
             origin = clamp_window(
                 Point(self.winfo_x(), self.winfo_y()),
                 (theme.COLLAPSED_SIZE, theme.COLLAPSED_SIZE),
-                self._work_area(),
+                self._work_area(Point(self.winfo_x(), self.winfo_y())),
             )
             self._collapsed_origin = origin
             self.geometry(f"+{origin.x}+{origin.y}")
@@ -278,7 +281,7 @@ class FloatingDockWindow(ctk.CTk):
             self._collapsed_origin = clamp_window(
                 Point(self.winfo_x(), self.winfo_y()),
                 (theme.COLLAPSED_SIZE, theme.COLLAPSED_SIZE),
-                self._work_area(),
+                self._work_area(Point(self.winfo_x(), self.winfo_y())),
             )
             self.snapshot = self.controller.update_settings(
                 x=self._collapsed_origin.x, y=self._collapsed_origin.y

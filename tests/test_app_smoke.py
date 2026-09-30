@@ -4,7 +4,9 @@ from dataclasses import replace
 
 import pytest
 
+import floating_link_dock.window as window_module
 from floating_link_dock.app_controller import AppController
+from floating_link_dock.geometry import Point, Rect
 from floating_link_dock.models import AppSettings, Link, LinkDraft
 from floating_link_dock.storage import LoadResult, seed_links
 
@@ -122,5 +124,29 @@ def test_build_app_creates_collapsed_window_and_can_expand() -> None:
         app.toggle_expanded()
         app.update_idletasks()
         assert app.is_expanded is True
+    finally:
+        app.destroy()
+
+
+def test_saved_position_uses_its_own_monitor_work_area(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    requested: list[Point] = []
+    monkeypatch.setattr(
+        window_module,
+        "get_work_area_for_point",
+        lambda point: requested.append(point) or Rect(1920, 0, 3840, 1040),
+        raising=False,
+    )
+    store = FakeStore(
+        [Link("a", "A", "https://a.example", 0)],
+        settings=AppSettings(x=2100, y=100, first_run_complete=True),
+    )
+
+    app = window_module.build_app(store, FakeStartupManager())
+    try:
+        app.update_idletasks()
+        assert requested[0] == Point(2100, 100)
+        assert app._collapsed_origin == Point(2100, 100)
     finally:
         app.destroy()
