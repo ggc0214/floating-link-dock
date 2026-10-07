@@ -77,3 +77,32 @@ def is_drag(start: Point, end: Point, threshold: int = 5) -> bool:
     delta_x = end.x - start.x
     delta_y = end.y - start.y
     return delta_x * delta_x + delta_y * delta_y >= threshold * threshold
+
+
+def snap_to_edge(origin: Point, size: tuple[int, int], area: Rect,
+                 threshold: int = 24) -> Point:
+    """Snap only when close to an edge; otherwise keep the window inside."""
+    point = clamp_window(origin, size, area, margin=0)
+    x, y = point.x, point.y
+    if x - area.left <= threshold:
+        x = area.left
+    elif area.right - x - size[0] <= threshold:
+        x = area.right - size[0]
+    if y - area.top <= threshold:
+        y = area.top
+    elif area.bottom - y - size[1] <= threshold:
+        y = area.bottom - size[1]
+    return Point(x, y)
+
+
+def half_hidden_origin(origin: Point, size: tuple[int, int], area: Rect) -> Point:
+    """Leave half the button visible. Prefer vertical edges at corners."""
+    if origin.x == area.left:
+        return Point(origin.x - size[0] // 2, origin.y)
+    if origin.x + size[0] == area.right:
+        return Point(origin.x + size[0] // 2, origin.y)
+    if origin.y == area.top:
+        return Point(origin.x, origin.y - size[1] // 2)
+    if origin.y + size[1] == area.bottom:
+        return Point(origin.x, origin.y + size[1] // 2)
+    return origin

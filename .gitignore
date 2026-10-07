@@ -15,3 +15,7 @@ dist/
 .ui-test-data/
 .ui-debug.*.log
 .exe-test-data/
+test-results-v11/
+test-results-v11-final/
+test-results-v11-next/
+test-results-v11-verified/

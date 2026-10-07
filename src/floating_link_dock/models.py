@@ -24,3 +24,5 @@ class AppSettings:
     always_on_top: bool = True
     launch_at_startup: bool = False
     first_run_complete: bool = False
+    onboarding_complete: bool = False
+    edge_auto_hide: bool = False

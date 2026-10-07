@@ -4,12 +4,15 @@ import tkinter as tk
 from dataclasses import replace
 from tkinter import messagebox
 from typing import Protocol
+from queue import SimpleQueue, Empty
+import time
 
 import customtkinter as ctk
 
 from . import theme
 from .app_controller import AppController
-from .geometry import Point, Rect, choose_expansion, clamp_window, is_drag
+from .geometry import (Point, Rect, choose_expansion, clamp_window, is_drag,
+                       snap_to_edge, half_hidden_origin)
 from .models import Link, LinkDraft
 from .storage import JsonStore
 from .widgets import InlineLinkEditor, LinkRow
@@ -42,6 +45,10 @@ class FloatingDockWindow(ctk.CTk):
         self._drag_start: Point | None = None
         self._window_start: Point | None = None
         self._dragged = False
+        self._hidden = False
+        self._outside_since = None
+        self._tray = None
+        self._commands = SimpleQueue()
         self._collapsed_origin = Point(
             self.snapshot.settings.x if self.snapshot.settings.x is not None else 32,
             self.snapshot.settings.y if self.snapshot.settings.y is not None else 120,
@@ -49,12 +56,100 @@ class FloatingDockWindow(ctk.CTk):
         self._reduced_motion = system_reduces_motion()
 
         self.title("Floating Link Dock")
+        self.minsize(theme.COLLAPSED_SIZE, theme.COLLAPSED_SIZE)
         self.overrideredirect(True)
         self.attributes("-topmost", self.snapshot.settings.always_on_top)
         self.configure(fg_color=theme.BACKGROUND)
         self.protocol("WM_DELETE_WINDOW", self.destroy)
         self._render_collapsed()
         self.after(50, self._show_warnings)
+        if not self.snapshot.settings.onboarding_complete:
+            self.after(100, self._onboard)
+
+    def _onboard(self) -> None:
+        self.show_panel()
+        self.snapshot = self.controller.update_settings(onboarding_complete=True)
+
+    def start_desktop_services(self) -> None:
+        from .tray import TrayIcon
+        self._tray = TrayIcon(self._commands)
+        self._tray.start()
+        self.after(100, self._desktop_tick)
+
+    def _desktop_tick(self) -> None:
+        try:
+            while True:
+                command = self._commands.get_nowait()
+                if command == "quit":
+                    self.destroy()
+                    return
+                if command == "reset":
+                    self.reset_position()
+                elif command == "show":
+                    self.show_panel()
+        except Empty:
+            pass
+        self._check_edge_hide()
+        self.after(100, self._desktop_tick)
+
+    def _position(self, origin: Point) -> None:
+        tk.Tk.geometry(self, f"+{origin.x}+{origin.y}")
+
+    def _reveal(self) -> None:
+        if self._hidden:
+            self._position(self._collapsed_origin)
+            self._hidden = False
+        self._outside_since = None
+
+    def _check_edge_hide(self) -> None:
+        if self.is_expanded or self._drag_start is not None:
+            return
+        if not self.snapshot.settings.edge_auto_hide:
+            self._reveal()
+            return
+        x, y = self.winfo_pointerxy()
+        inside = (self.winfo_x() <= x < self.winfo_x() + self.winfo_width()
+                  and self.winfo_y() <= y < self.winfo_y() + self.winfo_height())
+        if inside:
+            self._reveal()
+            return
+        if self._outside_since is None:
+            self._outside_since = time.monotonic()
+        if not self._hidden and time.monotonic() - self._outside_since >= 0.7:
+            hidden = half_hidden_origin(
+                self._collapsed_origin, (self.winfo_width(), self.winfo_height()),
+                self._work_area(self._collapsed_origin),
+            )
+            if hidden != self._collapsed_origin:
+                self._position(hidden)
+                self._hidden = True
+
+    def show_panel(self) -> None:
+        self._reveal()
+        self.deiconify()
+        self.update_idletasks()
+        if not self.is_expanded:
+            self.toggle_expanded()
+        self.lift()
+
+    def reset_position(self) -> None:
+        area = self._work_area()
+        self._collapsed_origin = Point(area.left + 32, area.top + 120)
+        self._hidden = False
+        self.snapshot = self.controller.update_settings(
+            x=self._collapsed_origin.x, y=self._collapsed_origin.y)
+        self._render_collapsed()
+        self.show_panel()
+
+    def report_callback_exception(self, exc, value, tb) -> None:
+        from .errors import report_error
+        report_error(value.with_traceback(tb), parent=self)
+
+    def destroy(self) -> None:
+        if self._tray is not None:
+            self._tray.stop()
+            self._tray = None
+        super().destroy()
 
     def _work_area(self, point: Point | None = None) -> Rect:
         try:
@@ -71,9 +166,12 @@ class FloatingDockWindow(ctk.CTk):
     def _render_collapsed(self) -> None:
         self._clear()
         self.is_expanded = False
-        origin = clamp_window(
+        self._hidden = False
+        self._outside_since = None
+        origin = snap_to_edge(
             self._collapsed_origin,
-            (theme.COLLAPSED_SIZE, theme.COLLAPSED_SIZE),
+            (round(self._apply_window_scaling(theme.COLLAPSED_SIZE)),
+             round(self._apply_window_scaling(theme.COLLAPSED_SIZE))),
             self._work_area(self._collapsed_origin),
         )
         self._collapsed_origin = origin
@@ -215,6 +313,7 @@ class FloatingDockWindow(ctk.CTk):
                 row += 1
 
     def toggle_expanded(self) -> None:
+        self._reveal()
         if self.is_expanded:
             self._show_editor = False
             self._editing = None
@@ -223,13 +322,14 @@ class FloatingDockWindow(ctk.CTk):
         anchor = Rect(
             self.winfo_x(),
             self.winfo_y(),
-            self.winfo_x() + theme.COLLAPSED_SIZE,
-            self.winfo_y() + theme.COLLAPSED_SIZE,
+            self.winfo_x() + self.winfo_width(),
+            self.winfo_y() + self.winfo_height(),
         )
         self._collapsed_origin = Point(anchor.left, anchor.top)
         placement = choose_expansion(
             anchor,
-            (theme.PANEL_WIDTH, theme.PANEL_HEIGHT),
+            (round(self._apply_window_scaling(theme.PANEL_WIDTH)),
+             round(self._apply_window_scaling(theme.PANEL_HEIGHT))),
             self._work_area(Point(anchor.left, anchor.top)),
         )
         self.geometry(
@@ -241,6 +341,7 @@ class FloatingDockWindow(ctk.CTk):
         self._render_expanded()
 
     def _drag_press(self, event) -> None:
+        self._reveal()
         self._drag_start = Point(event.x_root, event.y_root)
         self._window_start = Point(self.winfo_x(), self.winfo_y())
         self._dragged = False
@@ -262,13 +363,13 @@ class FloatingDockWindow(ctk.CTk):
         dragged = self._dragged or is_drag(self._drag_start, current)
         self._drag_start = None
         if dragged:
-            origin = clamp_window(
+            origin = snap_to_edge(
                 Point(self.winfo_x(), self.winfo_y()),
-                (theme.COLLAPSED_SIZE, theme.COLLAPSED_SIZE),
+                (self.winfo_width(), self.winfo_height()),
                 self._work_area(Point(self.winfo_x(), self.winfo_y())),
             )
             self._collapsed_origin = origin
-            self.geometry(f"+{origin.x}+{origin.y}")
+            self._position(origin)
             self.snapshot = self.controller.update_settings(x=origin.x, y=origin.y)
         else:
             self.toggle_expanded()
@@ -341,6 +442,7 @@ class FloatingDockWindow(ctk.CTk):
             messagebox.showerror("无法打开网站", str(exc), parent=self)
 
     def _show_context_menu(self, event) -> None:
+        self._reveal()
         menu = tk.Menu(
             self,
             tearoff=False,
@@ -360,8 +462,17 @@ class FloatingDockWindow(ctk.CTk):
             command=lambda: self._set_startup(startup_var.get()),
         )
         menu.add_separator()
+        hide_var = tk.BooleanVar(value=self.snapshot.settings.edge_auto_hide)
+        menu.add_checkbutton(label="贴边半隐藏", variable=hide_var,
+                             command=lambda: self._set_edge_hide(hide_var.get()))
+        menu.add_command(label="重置位置", command=self.reset_position)
+        menu.add_separator()
         menu.add_command(label="退出", command=self.destroy)
         menu.tk_popup(event.x_root, event.y_root)
+
+    def _set_edge_hide(self, enabled: bool) -> None:
+        self.snapshot = self.controller.update_settings(edge_auto_hide=enabled)
+        self._reveal()
 
     def _set_topmost(self, enabled: bool) -> None:
         try:

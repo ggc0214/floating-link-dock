@@ -90,6 +90,8 @@ class JsonStore:
                 always_on_top=self._bool(raw.get("always_on_top"), True),
                 launch_at_startup=self._bool(raw.get("launch_at_startup"), False),
                 first_run_complete=self._bool(raw.get("first_run_complete"), False),
+                onboarding_complete=self._bool(raw.get("onboarding_complete"), False),
+                edge_auto_hide=self._bool(raw.get("edge_auto_hide"), False),
             )
             return LoadResult(settings, existed=True)
         except (OSError, ValueError, TypeError, json.JSONDecodeError) as exc:

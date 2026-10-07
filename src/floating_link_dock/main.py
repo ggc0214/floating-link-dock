@@ -22,19 +22,27 @@ def _startup_target() -> Path:
 
 def main() -> int:
     enable_dpi_awareness()
+    guard = None
+    app = None
     try:
         guard = SingleInstance()
         if not guard.acquire(activate_existing_window):
             return 0
         app = build_app(JsonStore(), StartupManager(_startup_target()))
-    except (IntegrationError, OSError) as exc:
-        print(f"Floating Link Dock 启动失败：{exc}", file=sys.stderr)
-        return 1
-
-    try:
+        app.start_desktop_services()
         app.mainloop()
+    except Exception as exc:
+        from .errors import report_error
+        report_error(exc)
+        return 1
     finally:
-        guard.close()
+        if app is not None:
+            try:
+                app.destroy()
+            except Exception:
+                pass
+        if guard is not None:
+            guard.close()
     return 0
 
 
