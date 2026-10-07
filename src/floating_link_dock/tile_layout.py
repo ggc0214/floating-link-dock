@@ -1,6 +1,6 @@
 from .models import Link
 
-TILE_SIZE = 96
+TILE_SIZE = 80
 TILE_GAP = 12
 TILE_MARGIN = 8
 TILE_COLUMNS = 3

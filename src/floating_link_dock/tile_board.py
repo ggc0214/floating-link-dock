@@ -1,6 +1,5 @@
 """A freely positioned, scrollable website tile canvas."""
 import tkinter as tk
-from urllib.parse import urlparse
 
 import customtkinter as ctk
 
@@ -31,28 +30,23 @@ class TileBoard(ctk.CTkFrame):
         self._content_height = 1
         for link in links:
             tile = ctk.CTkFrame(self.canvas, width=TILE_SIZE, height=TILE_SIZE,
-                               fg_color=theme.SURFACE, corner_radius=14)
+                               fg_color=theme.SURFACE, corner_radius=12)
             tile.grid_propagate(False)
             tile.pack_propagate(False)
-            icon = ctk.CTkLabel(tile, text=link.name[:1].upper(), width=32, height=32,
+            icon = ctk.CTkLabel(tile, text=link.name[:1].upper(), width=28, height=28,
                                 corner_radius=10, fg_color=theme.SURFACE_RAISED,
-                                text_color=theme.ACCENT, font=(theme.FONT, 16, "bold"))
+                                text_color=theme.ACCENT, font=(theme.FONT, 14, "bold"))
             icon.pack(pady=(10, 2))
-            title = ctk.CTkLabel(tile, text=link.name, width=84, height=32,
-                                 wraplength=80, text_color=theme.TEXT,
-                                 font=(theme.FONT, 11, "bold"))
-            title.pack()
-            host = (urlparse(link.url).hostname or "").removeprefix("www.")
-            domain = ctk.CTkLabel(tile, text=host if len(host) < 16 else host[:13] + "…",
-                                  width=84, height=14, text_color=theme.TEXT_MUTED,
-                                  font=(theme.FONT, 9))
-            domain.pack()
+            title = ctk.CTkLabel(tile, text=link.name, width=70, height=28,
+                                 wraplength=68, text_color=theme.TEXT,
+                                 font=(theme.FONT, 10, "bold"))
+            title.pack(pady=(0, 6))
             x, y = link.x or 0, link.y or 0
             item = self.canvas.create_window(x * self._scale, y * self._scale,
                                             window=tile, anchor="nw")
             self._items[link.id] = (item, tile, link)
             self._positions[link.id] = Point(x, y)
-            for widget in (tile, icon, title, domain):
+            for widget in (tile, icon, title):
                 widget.bind("<ButtonPress-1>", lambda event, key=link.id: self._press(key, event))
                 widget.bind("<B1-Motion>", self._motion)
                 widget.bind("<ButtonRelease-1>", self._release)

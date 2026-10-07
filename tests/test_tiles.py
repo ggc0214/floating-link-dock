@@ -13,7 +13,7 @@ def test_existing_urls_migrate_without_losing_ids_or_names():
     controller = AppController(store)
     snapshot = controller.initialize()
     assert [(x.id, x.url) for x in snapshot.links] == [(x.id, x.url) for x in links]
-    assert [(x.x, x.y) for x in snapshot.links] == [(8, 8), (116, 8)]
+    assert [(x.x, x.y) for x in snapshot.links] == [(8, 8), (100, 8)]
     assert controller.initialize().links == snapshot.links
 
 
@@ -40,4 +40,4 @@ def test_failed_position_save_keeps_last_saved_layout():
 
 
 def test_new_tile_avoids_freely_positioned_tiles():
-    assert next_tile_position([Link("a", "A", "https://a.example", 0, 40, 20)]) == (224, 8)
+    assert next_tile_position([Link("a", "A", "https://a.example", 0, 40, 20)]) == (192, 8)

@@ -8,6 +8,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from floating_link_dock.window import build_app
 from floating_link_dock.storage import JsonStore, StoragePaths
 from floating_link_dock.windows_integration import StartupManager
+from floating_link_dock.tile_layout import TILE_SIZE
 
 root = Path(__file__).resolve().parents[1]
 store = JsonStore(StoragePaths.for_user(root / ".exe-test-data" / f"tiles-{time.time_ns()}"))
@@ -47,8 +48,8 @@ def verify():
         app.update_idletasks()
         tile._canvas.event_generate("<ButtonRelease-1>", x=10, y=10)
         x, y = board.canvas.coords(board._items[key][0])
-        assert x + 96 * board._scale <= board.canvas.winfo_width() + 1
-        assert y + 96 * board._scale <= board._content_height + 1
+        assert x + TILE_SIZE * board._scale <= board.canvas.winfo_width() + 1
+        assert y + TILE_SIZE * board._scale <= board._content_height + 1
         result.update(drag_without_open=True, click_opens=True,
                       restored_position=[saved.x, saved.y], constrained_to_board=True)
     except Exception as exc:
