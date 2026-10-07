@@ -251,9 +251,10 @@ class FloatingDockWindow(ctk.CTk):
         for widget in (header, grip, title):
             widget.bind("<ButtonPress-1>", self._drag_press)
             widget.bind("<B1-Motion>", self._drag_motion_expanded)
-            widget.bind("<ButtonRelease-1>", self._drag_release_expanded)
+            widget.bind("<ButtonRelease-1>",
+                        self._drag_release_grip if widget is grip
+                        else self._drag_release_expanded)
             widget.bind("<Button-3>", self._show_context_menu)
-        grip.bind("<ButtonRelease-1>", self._drag_release_grip)
 
         content = ctk.CTkScrollableFrame(
             self,
