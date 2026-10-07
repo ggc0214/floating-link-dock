@@ -16,6 +16,7 @@ from .geometry import (Point, Rect, choose_expansion, clamp_window, is_drag,
 from .models import Link, LinkDraft
 from .storage import JsonStore
 from .widgets import InlineLinkEditor, LinkRow
+from .tile_board import TileBoard
 from .windows_integration import (
     IntegrationError,
     StartupManager,
@@ -256,29 +257,25 @@ class FloatingDockWindow(ctk.CTk):
                         else self._drag_release_expanded)
             widget.bind("<Button-3>", self._show_context_menu)
 
-        content = ctk.CTkScrollableFrame(
-            self,
-            fg_color="transparent",
-            scrollbar_button_color=theme.SURFACE_RAISED,
-            scrollbar_button_hover_color=theme.ACCENT,
-        )
-        content.grid(row=1, column=0, sticky="nsew", padx=(12, 8), pady=(0, 12))
-        content.grid_columnconfigure(0, weight=1)
-
-        row = 0
         if self._show_editor:
             editor = InlineLinkEditor(
-                content,
+                self,
                 link=self._editing,
                 on_save=self._save_editor,
                 on_cancel=self._cancel_editor,
             )
-            editor.grid(row=row, column=0, sticky="ew", padx=(0, 4), pady=(0, 8))
-            row += 1
+            editor.grid(row=1, column=0, sticky="new", padx=14, pady=8)
+            return
 
+        self.board = TileBoard(
+            self, self.snapshot.links, on_open=self._open_link,
+            on_edit=self._begin_edit, on_delete=self._delete_link,
+            on_position=self._position_link,
+        )
+        self.board.grid(row=1, column=0, sticky="nsew", padx=(12, 8), pady=(0, 12))
         if not self.snapshot.links:
-            empty = ctk.CTkFrame(content, fg_color="transparent")
-            empty.grid(row=row, column=0, sticky="ew", padx=18, pady=60)
+            empty = ctk.CTkFrame(self.board.canvas, fg_color=theme.BACKGROUND)
+            empty.place(relx=0.5, rely=0.4, anchor="center")
             ctk.CTkLabel(
                 empty,
                 text="还没有常用网址",
@@ -299,20 +296,9 @@ class FloatingDockWindow(ctk.CTk):
                 text_color=theme.BACKGROUND,
                 command=self._begin_add,
             ).pack()
-        else:
-            for index, link in enumerate(self.snapshot.links):
-                item = LinkRow(
-                    content,
-                    link,
-                    on_open=self._open_link,
-                    on_edit=self._begin_edit,
-                    on_delete=self._delete_link,
-                    on_move=self._move_link,
-                    can_move_up=index > 0,
-                    can_move_down=index < len(self.snapshot.links) - 1,
-                )
-                item.grid(row=row, column=0, sticky="ew", padx=(0, 4), pady=4)
-                row += 1
+
+    def _position_link(self, link_id: str, x: int, y: int) -> None:
+        self.snapshot = self.controller.position_link(link_id, x, y)
 
     def toggle_expanded(self) -> None:
         self._reveal()

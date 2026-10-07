@@ -9,6 +9,8 @@ class Link:
     name: str
     url: str
     order: int
+    x: int | None = None
+    y: int | None = None
 
 
 @dataclass(frozen=True, slots=True)

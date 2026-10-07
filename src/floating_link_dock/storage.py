@@ -4,7 +4,7 @@ import json
 import os
 import shutil
 import tempfile
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from datetime import datetime
 from pathlib import Path
 from typing import Generic, Sequence, TypeVar
@@ -60,7 +60,7 @@ class JsonStore:
             links = [self._parse_link(item) for item in raw_links]
             links.sort(key=lambda item: item.order)
             normalized = [
-                Link(item.id, item.name, item.url, index)
+                replace(item, order=index)
                 for index, item in enumerate(links)
             ]
             return LoadResult(normalized, existed=True)
@@ -130,7 +130,11 @@ class JsonStore:
             raise ValueError("link url is invalid")
         if not isinstance(order, int) or isinstance(order, bool) or order < 0:
             raise ValueError("link order is invalid")
-        return Link(link_id, name, url, order)
+        x = JsonStore._optional_int(raw.get("x"))
+        y = JsonStore._optional_int(raw.get("y"))
+        if (x is not None and x < 0) or (y is not None and y < 0):
+            raise ValueError("tile position must not be negative")
+        return Link(link_id, name, url, order, x, y)
 
     @staticmethod
     def _optional_int(value: object) -> int | None:

@@ -6,6 +6,7 @@ from typing import Literal, Protocol, Sequence
 from .link_service import create_link, reorder_links
 from .models import AppSettings, Link, LinkDraft
 from .storage import LoadResult, seed_links
+from .tile_layout import next_tile_position
 
 
 class Store(Protocol):
@@ -48,6 +49,17 @@ class AppController:
             settings = replace(settings, first_run_complete=True)
             self._store.save_settings(settings)
 
+        positioned = [link for link in links if link.x is not None and link.y is not None]
+        migrated = False
+        for index, link in enumerate(links):
+            if link.x is None or link.y is None:
+                x, y = next_tile_position(positioned)
+                links[index] = replace(link, x=x, y=y)
+                positioned.append(links[index])
+                migrated = True
+        if migrated:
+            self._store.save_links(links)
+
         warnings = tuple(
             warning
             for warning in (links_result.warning, settings_result.warning)
@@ -57,8 +69,20 @@ class AppController:
         return self._snapshot
 
     def add_link(self, draft: LinkDraft) -> AppSnapshot:
-        candidate = [*self.snapshot.links, create_link(draft, len(self.snapshot.links))]
+        x, y = next_tile_position(list(self.snapshot.links))
+        candidate = [*self.snapshot.links,
+                     replace(create_link(draft, len(self.snapshot.links)), x=x, y=y)]
         return self._publish_links(candidate)
+
+    def position_link(self, link_id: str, x: int, y: int) -> AppSnapshot:
+        if x < 0 or y < 0:
+            raise ValueError("tile position must not be negative")
+        if not any(link.id == link_id for link in self.snapshot.links):
+            raise KeyError(link_id)
+        return self._publish_links([
+            replace(link, x=x, y=y) if link.id == link_id else link
+            for link in self.snapshot.links
+        ])
 
     def edit_link(self, link_id: str, draft: LinkDraft) -> AppSnapshot:
         candidate = [
