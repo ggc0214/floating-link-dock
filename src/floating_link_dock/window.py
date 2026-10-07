@@ -253,6 +253,7 @@ class FloatingDockWindow(ctk.CTk):
             widget.bind("<B1-Motion>", self._drag_motion_expanded)
             widget.bind("<ButtonRelease-1>", self._drag_release_expanded)
             widget.bind("<Button-3>", self._show_context_menu)
+        grip.bind("<ButtonRelease-1>", self._drag_release_grip)
 
         content = ctk.CTkScrollableFrame(
             self,
@@ -376,6 +377,17 @@ class FloatingDockWindow(ctk.CTk):
 
     def _drag_motion_expanded(self, event) -> None:
         self._drag_motion(event)
+
+    def _drag_release_grip(self, event) -> None:
+        if self._drag_start is None:
+            return
+        dragged = self._dragged or is_drag(
+            self._drag_start, Point(event.x_root, event.y_root)
+        )
+        self._dragged = dragged
+        self._drag_release_expanded(event)
+        if not dragged:
+            self.toggle_expanded()
 
     def _drag_release_expanded(self, _event) -> None:
         if self._dragged:
