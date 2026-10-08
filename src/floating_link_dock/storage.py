@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 import shutil
 import tempfile
 from dataclasses import asdict, dataclass, replace
@@ -33,9 +34,11 @@ class StoragePaths:
 
     @classmethod
     def for_user(cls, local_app_data: Path | None = None) -> "StoragePaths":
-        base = local_app_data or Path(
-            os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local")
-        )
+        base = local_app_data
+        if base is None:
+            base = (Path.home() / 'Library' / 'Application Support'
+                    if sys.platform == 'darwin' else Path(
+                        os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local")))
         root = base / "FloatingLinkDock"
         return cls(
             root=root,

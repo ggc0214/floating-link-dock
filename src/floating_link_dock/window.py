@@ -6,10 +6,12 @@ from tkinter import messagebox
 from typing import Protocol
 from queue import SimpleQueue, Empty
 import time
+import sys
 
 import customtkinter as ctk
 
 from . import theme
+from .face_icon import build_face_icon
 from .app_controller import AppController
 from .geometry import (Point, Rect, choose_expansion, clamp_window, is_drag,
                        snap_to_edge, half_hidden_origin)
@@ -17,12 +19,13 @@ from .models import Link, LinkDraft
 from .storage import JsonStore
 from .widgets import InlineLinkEditor, LinkRow
 from .tile_board import TileBoard
-from .windows_integration import (
+from .platform_integration import (
     IntegrationError,
     StartupManager,
     get_cursor_work_area,
     get_work_area_for_point,
     open_in_default_browser,
+    open_in_browser,
     system_reduces_motion,
 )
 
@@ -35,7 +38,7 @@ class StartupPort(Protocol):
 
 class FloatingDockWindow(ctk.CTk):
     def __init__(self, controller: AppController, startup: StartupPort) -> None:
-        ctk.set_appearance_mode("dark")
+        ctk.set_appearance_mode("light")
         super().__init__(fg_color=theme.BACKGROUND)
         self.controller = controller
         self.startup = startup
@@ -55,23 +58,40 @@ class FloatingDockWindow(ctk.CTk):
             self.snapshot.settings.y if self.snapshot.settings.y is not None else 120,
         )
         self._reduced_motion = system_reduces_motion()
+        face = build_face_icon()
+        self._button_face = ctk.CTkImage(light_image=face, dark_image=face, size=(32, 32))
+        self._header_face = ctk.CTkImage(light_image=face, dark_image=face, size=(26, 26))
 
         self.title("Floating Link Dock")
         self.minsize(theme.COLLAPSED_SIZE, theme.COLLAPSED_SIZE)
         self.overrideredirect(True)
+        # Keep the desktop dock out of the taskbar; the tray remains its entry point.
+        if sys.platform == 'win32':
+            self.attributes("-toolwindow", True)
         self.attributes("-topmost", self.snapshot.settings.always_on_top)
         self.configure(fg_color=theme.BACKGROUND)
         self.protocol("WM_DELETE_WINDOW", self.destroy)
+        if sys.platform == 'darwin':
+            self.tk.createcommand('::tk::mac::ReopenApplication', self._mac_reopen)
         self._render_collapsed()
         self.after(50, self._show_warnings)
-        if not self.snapshot.settings.onboarding_complete:
-            self.after(100, self._onboard)
+        self.after(100, self._onboard)
+        if hasattr(self.startup, 'configuration_warning'):
+            warning = self.startup.configuration_warning()
+            if warning:
+                self.after(150, lambda: messagebox.showwarning('开机启动', warning, parent=self))
 
     def _onboard(self) -> None:
         self.show_panel()
-        self.snapshot = self.controller.update_settings(onboarding_complete=True)
+        if not self.snapshot.settings.onboarding_complete:
+            self.snapshot = self.controller.update_settings(onboarding_complete=True)
+
+    def _mac_reopen(self, *_args) -> None:
+        self._commands.put('show')
 
     def start_desktop_services(self) -> None:
+        if self._tray is not None:
+            return
         from .tray import TrayIcon
         self._tray = TrayIcon(self._commands)
         self._tray.start()
@@ -181,20 +201,24 @@ class FloatingDockWindow(ctk.CTk):
         )
         button = ctk.CTkButton(
             self,
-            text="↗",
+            text="",
+            image=self._button_face,
+            border_spacing=0,
             width=theme.COLLAPSED_SIZE,
             height=theme.COLLAPSED_SIZE,
-            corner_radius=theme.RADIUS,
+            corner_radius=10,
             fg_color=theme.ACCENT,
             hover_color=theme.ACCENT_HOVER,
-            text_color=theme.BACKGROUND,
-            font=(theme.FONT, 22, "bold"),
+            text_color=theme.TEXT,
+            border_width=2,
+            border_color=theme.BORDER,
+            font=("Segoe UI Symbol", 30, "bold"),
         )
         button.pack(fill="both", expand=True)
         button.bind("<ButtonPress-1>", self._drag_press)
         button.bind("<B1-Motion>", self._drag_motion)
         button.bind("<ButtonRelease-1>", self._drag_release)
-        button.bind("<Button-3>", self._show_context_menu)
+        self._bind_context_menu(button)
 
     def _render_expanded(self) -> None:
         self._clear()
@@ -208,13 +232,14 @@ class FloatingDockWindow(ctk.CTk):
         header.grid_columnconfigure(1, weight=1)
         grip = ctk.CTkLabel(
             header,
-            text="↗",
+            text="",
+            image=self._header_face,
             width=38,
             height=38,
             corner_radius=11,
             fg_color=theme.ACCENT,
-            text_color=theme.BACKGROUND,
-            font=(theme.FONT, 18, "bold"),
+            text_color=theme.TEXT,
+            font=("Segoe UI Symbol", 25, "bold"),
         )
         grip.grid(row=0, column=0, padx=(0, 10))
         title = ctk.CTkLabel(
@@ -233,7 +258,9 @@ class FloatingDockWindow(ctk.CTk):
             corner_radius=10,
             fg_color=theme.SURFACE_RAISED,
             hover_color=theme.SURFACE_HOVER,
-            text_color=theme.ACCENT,
+            text_color=theme.TEXT,
+            border_width=2,
+            border_color=theme.BORDER,
             command=self._begin_add,
         )
         add.grid(row=0, column=2, padx=(4, 6))
@@ -255,7 +282,7 @@ class FloatingDockWindow(ctk.CTk):
             widget.bind("<ButtonRelease-1>",
                         self._drag_release_grip if widget is grip
                         else self._drag_release_expanded)
-            widget.bind("<Button-3>", self._show_context_menu)
+            self._bind_context_menu(widget)
 
         if self._show_editor:
             editor = InlineLinkEditor(
@@ -271,6 +298,7 @@ class FloatingDockWindow(ctk.CTk):
             self, self.snapshot.links, on_open=self._open_link,
             on_edit=self._begin_edit, on_delete=self._delete_link,
             on_position=self._position_link,
+            on_open_browser=self._open_link_in_browser,
         )
         self.board.grid(row=1, column=0, sticky="nsew", padx=(12, 8), pady=(0, 12))
         if not self.snapshot.links:
@@ -440,7 +468,15 @@ class FloatingDockWindow(ctk.CTk):
         except IntegrationError as exc:
             messagebox.showerror("无法打开网站", str(exc), parent=self)
 
+    def _open_link_in_browser(self, link: Link, browser) -> None:
+        try:
+            open_in_browser(link.url, browser)
+        except IntegrationError as exc:
+            messagebox.showerror("无法打开网站", str(exc), parent=self)
+
     def _show_context_menu(self, event) -> None:
+        self._drag_start = None
+        self._dragged = False
         self._reveal()
         menu = tk.Menu(
             self,
@@ -467,7 +503,16 @@ class FloatingDockWindow(ctk.CTk):
         menu.add_command(label="重置位置", command=self.reset_position)
         menu.add_separator()
         menu.add_command(label="退出", command=self.destroy)
-        menu.tk_popup(event.x_root, event.y_root)
+        try:
+            menu.tk_popup(event.x_root, event.y_root)
+        finally:
+            menu.grab_release()
+        return 'break'
+
+    def _bind_context_menu(self, widget) -> None:
+        for sequence in (('<Button-2>', '<Button-3>', '<Control-Button-1>')
+                         if sys.platform == 'darwin' else ('<Button-3>',)):
+            widget.bind(sequence, self._show_context_menu)
 
     def _set_edge_hide(self, enabled: bool) -> None:
         self.snapshot = self.controller.update_settings(edge_auto_hide=enabled)

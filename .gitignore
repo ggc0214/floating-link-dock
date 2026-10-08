@@ -5,6 +5,11 @@ __pycache__/
 .test-tmp/
 .ruff_cache/
 .venv/
+.venv-macos/
+.test-mac*/
+assets/app-macos.icns
+.tk-test-runtime/
+delivery/
 venv/
 build/
 dist/

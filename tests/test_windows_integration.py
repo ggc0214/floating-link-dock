@@ -3,6 +3,10 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+import sys
+
+if sys.platform != 'win32':
+    pytest.skip('Windows registry and mutex APIs', allow_module_level=True)
 
 import floating_link_dock.windows_integration as wi
 from floating_link_dock.main import _startup_target

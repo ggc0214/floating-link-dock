@@ -1,8 +1,8 @@
-import ctypes
 import traceback
 from datetime import datetime
 
 from .storage import StoragePaths
+from .platform_integration import show_startup_error
 
 
 def report_error(exc: BaseException, parent=None) -> None:
@@ -21,4 +21,4 @@ def report_error(exc: BaseException, parent=None) -> None:
         from tkinter import messagebox
         messagebox.showerror("常用网址 · 错误", message, parent=parent)
     else:
-        ctypes.windll.user32.MessageBoxW(None, message, "常用网址 · 启动失败", 0x10)
+        show_startup_error(message)

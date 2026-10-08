@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ctypes
+import os
 import subprocess
 import sys
 import webbrowser
@@ -12,6 +13,7 @@ import winreg
 
 from .geometry import Point, Rect
 from .link_service import LinkValidationError, normalize_url
+from .integration_types import BrowserChoice, IntegrationError
 
 
 WINDOW_TITLE = "Floating Link Dock"
@@ -19,8 +21,8 @@ RUN_KEY = r"Software\Microsoft\Windows\CurrentVersion\Run"
 RUN_VALUE = "FloatingLinkDock"
 
 
-class IntegrationError(RuntimeError):
-    """A safe, user-displayable Windows integration failure."""
+def show_startup_error(message: str) -> None:
+    ctypes.windll.user32.MessageBoxW(None, message, "常用网址 · 启动失败", 0x10)
 
 
 def enable_dpi_awareness() -> None:
@@ -105,6 +107,52 @@ def open_in_default_browser(url: str) -> None:
         raise IntegrationError("无法启动默认浏览器") from exc
     if not opened:
         raise IntegrationError("系统没有接受浏览器打开请求")
+
+
+def _registered_browser_path(executable: str) -> Path | None:
+    key_name = rf"Software\Microsoft\Windows\CurrentVersion\App Paths\{executable}"
+    for hive in (winreg.HKEY_CURRENT_USER, winreg.HKEY_LOCAL_MACHINE):
+        for view in (winreg.KEY_WOW64_64KEY, winreg.KEY_WOW64_32KEY):
+            try:
+                with winreg.OpenKey(hive, key_name, 0, winreg.KEY_READ | view) as key:
+                    value, _ = winreg.QueryValueEx(key, "")
+                candidate = Path(os.path.expandvars(value.strip().strip('"')))
+                if candidate.is_file():
+                    return candidate
+            except (OSError, TypeError, ValueError):
+                continue
+    return None
+
+
+def installed_browsers() -> list[BrowserChoice]:
+    choices = []
+    for name, executable, relative in (
+        ('Chrome', 'chrome.exe', 'Google/Chrome/Application/chrome.exe'),
+        ('Edge', 'msedge.exe', 'Microsoft/Edge/Application/msedge.exe'),
+        ('Firefox', 'firefox.exe', 'Mozilla Firefox/firefox.exe'),
+    ):
+        candidates = [_registered_browser_path(executable)]
+        candidates.extend(Path(root) / relative for variable in
+                          ('LOCALAPPDATA', 'PROGRAMFILES', 'PROGRAMFILES(X86)')
+                          if (root := os.environ.get(variable)))
+        for candidate in candidates:
+            if candidate is not None and candidate.is_file():
+                choices.append(BrowserChoice(name, candidate))
+                break
+    return choices
+
+
+def open_in_browser(url: str, browser: BrowserChoice) -> None:
+    try:
+        normalized = normalize_url(url)
+    except LinkValidationError as exc:
+        raise IntegrationError(str(exc)) from exc
+    if not browser.executable.is_file():
+        raise IntegrationError(f"找不到 {browser.name}，请检查是否已安装，再重新打开右键菜单")
+    try:
+        subprocess.Popen([str(browser.executable), normalized], shell=False)
+    except OSError as exc:
+        raise IntegrationError(f"无法启动 {browser.name}，请检查浏览器是否能正常打开") from exc
 
 
 class StartupManager:

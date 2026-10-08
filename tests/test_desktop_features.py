@@ -5,6 +5,22 @@ from test_app_smoke import FakeStore, FakeStartupManager
 from floating_link_dock.window import build_app
 
 
+def test_existing_profile_expands_on_every_launch():
+    import time
+    store = FakeStore(settings=AppSettings(onboarding_complete=True))
+    for _ in range(2):
+        app = build_app(store, FakeStartupManager())
+        try:
+            deadline = time.monotonic() + .3
+            while time.monotonic() < deadline:
+                app.update()
+                time.sleep(.01)
+            assert app.is_expanded
+            assert app.winfo_viewable()
+        finally:
+            app.destroy()
+
+
 def test_snap_and_hide_on_negative_monitor():
     area = Rect(-1920, 0, 0, 1040)
     size = (78, 78)
@@ -66,10 +82,20 @@ def test_tray_commands_are_executed_on_ui_thread():
         app.destroy()
 
 
-def test_error_is_logged_and_shown(monkeypatch, tmp_path):
+import pytest
+
+
+@pytest.mark.parametrize('platform_name', ['win32', 'darwin'])
+def test_error_is_logged_and_shown(monkeypatch, tmp_path, platform_name):
+    import sys
+    from pathlib import Path
     from floating_link_dock import errors
     from tkinter import messagebox
     monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
+    monkeypatch.setattr(sys, 'platform', platform_name)
+    monkeypatch.setattr(Path, 'home', classmethod(lambda cls: tmp_path / 'fake-home'))
+    temporary_paths = StoragePaths.for_user(tmp_path)
+    monkeypatch.setattr(errors.StoragePaths, 'for_user', classmethod(lambda cls: temporary_paths))
     shown = []
     monkeypatch.setattr(messagebox, "showerror", lambda *args, **kwargs: shown.append(args))
     errors.report_error(OSError("diagnostic disk failure"), parent=object())

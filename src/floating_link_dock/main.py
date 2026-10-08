@@ -5,7 +5,7 @@ from pathlib import Path
 
 from .storage import JsonStore
 from .window import build_app
-from .windows_integration import (
+from .platform_integration import (
     IntegrationError,
     SingleInstance,
     StartupManager,
@@ -15,6 +15,13 @@ from .windows_integration import (
 
 
 def _startup_target() -> Path:
+    if sys.platform == 'darwin':
+        if getattr(sys, 'frozen', False):
+            executable = Path(sys.executable).resolve()
+            for parent in executable.parents:
+                if parent.suffix == '.app':
+                    return parent
+        return Path(__file__).resolve()
     if getattr(sys, "frozen", False):
         return Path(sys.executable)
     return Path(__file__).resolve().parents[2] / "run.bat"
@@ -29,6 +36,8 @@ def main() -> int:
         if not guard.acquire(activate_existing_window):
             return 0
         app = build_app(JsonStore(), StartupManager(_startup_target()))
+        if hasattr(guard, 'bind_commands'):
+            guard.bind_commands(app._commands)
         app.start_desktop_services()
         app.mainloop()
     except Exception as exc:

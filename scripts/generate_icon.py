@@ -16,39 +16,21 @@ def build_icon(size: int = 1024) -> Image.Image:
     draw.rounded_rectangle(
         (margin, margin, size - margin, size - margin),
         radius=size * 0.24,
-        fill="#151A1F",
-        outline="#36434D",
+        fill="#A8E4CF",
+        outline="#6B9184",
         width=max(2, int(size * 0.018)),
     )
     draw.rounded_rectangle(
         (size * 0.19, size * 0.19, size * 0.81, size * 0.81),
         radius=size * 0.19,
-        fill="#61D6C6",
+        fill="#A8E4CF",
     )
 
-    stroke = max(8, int(size * 0.07))
-    link_color = "#151A1F"
-    first = Image.new("RGBA", image.size, (0, 0, 0, 0))
-    first_draw = ImageDraw.Draw(first)
-    first_draw.rounded_rectangle(
-        (size * 0.27, size * 0.39, size * 0.58, size * 0.59),
-        radius=size * 0.10,
-        outline=link_color,
-        width=stroke,
-    )
-    first = first.rotate(-38, resample=Image.Resampling.BICUBIC, center=(size / 2, size / 2))
-    image.alpha_composite(first)
-
-    second = Image.new("RGBA", image.size, (0, 0, 0, 0))
-    second_draw = ImageDraw.Draw(second)
-    second_draw.rounded_rectangle(
-        (size * 0.42, size * 0.41, size * 0.73, size * 0.61),
-        radius=size * 0.10,
-        outline=link_color,
-        width=stroke,
-    )
-    second = second.rotate(-38, resample=Image.Resampling.BICUBIC, center=(size / 2, size / 2))
-    image.alpha_composite(second)
+    ink = "#344B49"
+    draw.ellipse((size*.31, size*.34, size*.39, size*.44), fill=ink)
+    draw.ellipse((size*.61, size*.34, size*.69, size*.44), fill=ink)
+    draw.arc((size*.28, size*.38, size*.72, size*.72), 10, 170,
+             fill=ink, width=max(2, int(size*.045)))
     return image
 
 

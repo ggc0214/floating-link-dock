@@ -160,7 +160,7 @@ class InlineLinkEditor(ctk.CTkFrame):
             height=30,
             fg_color=theme.ACCENT,
             hover_color=theme.ACCENT_HOVER,
-            text_color=theme.BACKGROUND,
+            text_color=theme.TEXT,
             command=self._submit,
         ).grid(row=0, column=1)
         self.url_entry.bind("<Return>", lambda _event: self._submit())

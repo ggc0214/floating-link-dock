@@ -1,41 +1,49 @@
 """A freely positioned, scrollable website tile canvas."""
 import tkinter as tk
+import sys
 
 import customtkinter as ctk
 
 from . import theme
 from .geometry import Point, is_drag
 from .tile_layout import TILE_SIZE, TILE_MARGIN
+from .platform_integration import installed_browsers
 
 
 class TileBoard(ctk.CTkFrame):
-    def __init__(self, master, links, *, on_open, on_edit, on_delete, on_position):
+    def __init__(self, master, links, *, on_open, on_edit, on_delete, on_position,
+                 on_open_browser=None):
         super().__init__(master, fg_color="transparent")
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(0, weight=1)
         self.canvas = tk.Canvas(self, background=theme.BACKGROUND,
                                 highlightthickness=0, borderwidth=0)
         self.canvas.grid(row=0, column=0, sticky="nsew")
-        scrollbar = ctk.CTkScrollbar(self, command=self.canvas.yview)
+        scrollbar = ctk.CTkScrollbar(self, command=self.canvas.yview,
+                                     button_color=theme.ACCENT,
+                                     button_hover_color=theme.BORDER)
         scrollbar.grid(row=0, column=1, sticky="ns")
         self.canvas.configure(yscrollcommand=scrollbar.set)
         self._scale = self._get_widget_scaling()
         self._on_open, self._on_edit = on_open, on_edit
         self._on_delete, self._on_position = on_delete, on_position
+        self._on_open_browser = on_open_browser
         self._items = {}
         self._positions = {}
         self._drag_start = None
         self._active = None
         self._dragged = False
         self._content_height = 1
-        for link in links:
+        for index, link in enumerate(links):
             tile = ctk.CTkFrame(self.canvas, width=TILE_SIZE, height=TILE_SIZE,
-                               fg_color=theme.SURFACE, corner_radius=12)
+                               fg_color=theme.TILE_COLORS[index % len(theme.TILE_COLORS)],
+                               corner_radius=16, border_width=2,
+                               border_color=theme.BORDER)
             tile.grid_propagate(False)
             tile.pack_propagate(False)
             icon = ctk.CTkLabel(tile, text=link.name[:1].upper(), width=28, height=28,
-                                corner_radius=10, fg_color=theme.SURFACE_RAISED,
-                                text_color=theme.ACCENT, font=(theme.FONT, 14, "bold"))
+                                corner_radius=10, fg_color=theme.SURFACE,
+                                text_color=theme.TEXT, font=(theme.FONT, 14, "bold"))
             icon.pack(pady=(10, 2))
             title = ctk.CTkLabel(tile, text=link.name, width=70, height=28,
                                  wraplength=68, text_color=theme.TEXT,
@@ -50,7 +58,9 @@ class TileBoard(ctk.CTkFrame):
                 widget.bind("<ButtonPress-1>", lambda event, key=link.id: self._press(key, event))
                 widget.bind("<B1-Motion>", self._motion)
                 widget.bind("<ButtonRelease-1>", self._release)
-                widget.bind("<Button-3>", lambda event, key=link.id: self._menu(key, event))
+                for sequence in (('<Button-2>', '<Button-3>', '<Control-Button-1>')
+                                 if sys.platform == 'darwin' else ('<Button-3>',)):
+                    widget.bind(sequence, lambda event, key=link.id: self._context_click(key, event))
                 widget.bind("<MouseWheel>", self._wheel)
         self.canvas.bind("<Configure>", self._resize)
         self.canvas.bind("<MouseWheel>", self._wheel)
@@ -66,7 +76,8 @@ class TileBoard(ctk.CTkFrame):
         self.canvas.configure(scrollregion=(0, 0, width, self._content_height))
 
     def _wheel(self, event):
-        self.canvas.yview_scroll(-int(event.delta / 120), "units")
+        delta = event.delta if sys.platform == 'darwin' else event.delta / 120
+        self.canvas.yview_scroll(-int(delta), "units")
         return "break"
 
     def _press(self, key, event):
@@ -114,10 +125,21 @@ class TileBoard(ctk.CTkFrame):
         menu = tk.Menu(self, tearoff=False, bg=theme.SURFACE, fg=theme.TEXT,
                        activebackground=theme.SURFACE_HOVER, activeforeground=theme.TEXT)
         menu.add_command(label=link.name, state="disabled")
-        menu.add_command(label="打开网站", command=lambda: self._on_open(link))
+        menu.add_command(label="使用默认浏览器打开", command=lambda: self._on_open(link))
+        if self._on_open_browser is not None:
+            for browser in installed_browsers():
+                menu.add_command(label=f"使用 {browser.name} 打开",
+                                 command=lambda selected=browser: self._on_open_browser(link, selected))
+        menu.add_separator()
         menu.add_command(label="编辑", command=lambda: self._on_edit(link))
         menu.add_command(label="删除", command=lambda: self._on_delete(link))
         try:
             menu.tk_popup(event.x_root, event.y_root)
         finally:
             menu.grab_release()
+
+    def _context_click(self, key, event):
+        self._active = None
+        self._drag_start = None
+        self._menu(key, event)
+        return 'break'
