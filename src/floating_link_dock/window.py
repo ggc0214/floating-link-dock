@@ -64,7 +64,13 @@ class FloatingDockWindow(ctk.CTk):
 
         self.title("Floating Link Dock")
         self.minsize(theme.COLLAPSED_SIZE, theme.COLLAPSED_SIZE)
-        self.overrideredirect(True)
+        if sys.platform == 'darwin':
+            # Override-redirect makes Tk's Aqua window a non-activating help
+            # window. Forced Entry focus only masks that until the next render.
+            # Keep a managed window eligible for keyboard focus, without chrome.
+            self.attributes('-stylemask', ())
+        else:
+            self.overrideredirect(True)
         # Keep the desktop dock out of the taskbar; the tray remains its entry point.
         if sys.platform == 'win32':
             self.attributes("-toolwindow", True)

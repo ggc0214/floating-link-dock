@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from urllib.parse import urlparse
+import sys
 
 import customtkinter as ctk
 
@@ -164,7 +165,27 @@ class InlineLinkEditor(ctk.CTkFrame):
             command=self._submit,
         ).grid(row=0, column=1)
         self.url_entry.bind("<Return>", lambda _event: self._submit())
-        self.url_entry.focus_set()
+        if sys.platform == 'darwin':
+            # Activate the accessory app after the new editor is mapped;
+            # the previous focused Entry was destroyed during the render.
+            for entry in (self.name_entry, self.url_entry):
+                entry.bind('<Button-1>',
+                           lambda _event, target=entry: self._focus_macos_entry(target),
+                           add='+')
+            self.name_entry.bind(
+                '<Map>',
+                lambda _event: self.after_idle(
+                    lambda: self._focus_macos_entry(self.name_entry)),
+                add='+')
+        else:
+            self.url_entry.focus_set()
+
+    def _focus_macos_entry(self, entry) -> None:
+        if not self.winfo_exists() or not entry.winfo_viewable():
+            return
+        from AppKit import NSApplication
+        NSApplication.sharedApplication().activateIgnoringOtherApps_(True)
+        entry.focus_force()
 
     def _submit(self) -> None:
         try:
