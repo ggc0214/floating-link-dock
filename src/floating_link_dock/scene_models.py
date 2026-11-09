@@ -91,7 +91,7 @@ def validate_windows_path(target):
 
 
 def validate_resource(draft):
-    if draft.kind not in {'url', 'file', 'folder', 'app', 'text'}:
+    if draft.kind not in {'url', 'file', 'folder', 'app'}:
         raise ValueError('不支持的项目类型')
     name = draft.name.strip()
     if not name or len(name) > 80:
@@ -101,7 +101,7 @@ def validate_resource(draft):
     target = draft.target
     if draft.kind == 'url':
         target = normalize_url(target)
-    elif draft.kind in {'file', 'folder', 'app'}:
+    else:
         if draft.kind == 'app':
             target = target.strip()
             if len(target) >= 2 and target[0] == target[-1] == '"':
@@ -111,10 +111,4 @@ def validate_resource(draft):
             raise ValueError('请选择盘符下的 .exe 程序或 .lnk 快捷方式')
         if draft.kind == 'file' and ntpath.splitext(target)[1].lower() not in FILE_TYPES:
             raise ValueError('暂不支持此文件类型；请使用日常文档或图片，不支持程序、脚本和快捷方式')
-    elif not target.strip():
-        raise ValueError('请输入需要复制的文字')
-    return replace(draft, name=name, target=target, auto_open=draft.auto_open and draft.kind != 'text')
-
-
-def batch_items(scene):
-    return tuple(i for i in scene.items if i.kind != 'text')
+    return replace(draft, name=name, target=target)

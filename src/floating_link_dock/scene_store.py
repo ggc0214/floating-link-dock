@@ -110,6 +110,9 @@ class SceneStore:
             if not isinstance(scene_raw['items'], list): raise ValueError('资源列表无效')
             items = []
             for item_raw in scene_raw['items']:
+                # Older builds allowed text tiles in both tabs.
+                if item_raw.get('kind') == 'text':
+                    continue
                 item = ResourceItem(**item_raw)
                 if not isinstance(item.id, str) or not item.id or item.id in ids: raise ValueError('资源ID无效')
                 ids.add(item.id)
@@ -124,7 +127,10 @@ class SceneStore:
             for value in (x, y):
                 if value is not None and (type(value) is not int or value < 0):
                     raise ValueError('场景坐标无效')
-            scenes.append(Scene(sid, name, tuple(sorted(items, key=lambda i: i.order)), x, y))
+            items.sort(key=lambda item: item.order)
+            if len(items) < len(scene_raw['items']):
+                items = [replace(item, order=index) for index, item in enumerate(items)]
+            scenes.append(Scene(sid, name, tuple(items), x, y))
         if raw['active_scene_id'] not in {s.id for s in scenes}: raise ValueError('当前场景无效')
         placed = [s for s in scenes if s.x is not None and s.y is not None]
         for index, scene in enumerate(scenes):

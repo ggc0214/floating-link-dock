@@ -6,7 +6,7 @@ import customtkinter as ctk
 from . import theme
 from .window import FloatingDockWindow
 from .scene_controller import SceneController
-from .scene_models import ResourceItem, batch_items
+from .scene_models import ResourceItem
 from .scene_widgets import ResourceBoard, ResourceEditor, SceneBoard
 from .resource_dispatch import ResourceDispatcher, open_windows_path
 from .platform_integration import open_in_default_browser, open_in_browser
@@ -270,10 +270,7 @@ class ScenesWindow(FloatingDockWindow):
             self.status_label.configure(text=text)
 
     def _open_link(self, item):
-        if item.kind == 'text':
-            self.clipboard_clear(); self.clipboard_append(item.target)
-            self._set_status(f'已复制“{item.name}”')
-        else: self._dispatch((item,))
+        self._dispatch((item,))
 
     def _open_link_in_browser(self, item, browser):
         self._dispatch((BrowserOpenItem(**asdict(item), browser=browser),))
@@ -287,9 +284,8 @@ class ScenesWindow(FloatingDockWindow):
         except ValueError as exc: self._error(exc)
 
     def _launch_scene(self, scene):
-        items = batch_items(scene)
-        if items:
-            self._dispatch(items, scene_name=scene.name)
+        if scene.items:
+            self._dispatch(scene.items, scene_name=scene.name)
         else:
             self._set_status('没有可打开的项目。右键场景方块，选择“编辑场景”添加。')
 

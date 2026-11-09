@@ -16,7 +16,6 @@ def make_app(tmp_path):
     store = SceneStore(tmp_path / 'new', tmp_path / 'old'); store.initialize(False)
     controller = SceneController(store); controller.initialize()
     controller.add_resource(ResourceDraft('url', '网站', 'example.com', True))
-    controller.add_resource(ResourceDraft('text', '话术', 'hello\nworld'))
     calls = []
     dispatcher = ResourceDispatcher(lambda i: calls.append(i.id), lambda i: calls.append(i.id))
     return build_scenes_app(store, FakeStartupManager(), dispatcher), calls
@@ -84,7 +83,7 @@ def test_add_application_and_launch_alone_and_in_scene(tmp_path, monkeypatch):
         app.destroy()
 
 
-def test_scene_switch_only_shows_and_text_copies(tmp_path):
+def test_scene_switch_only_shows(tmp_path):
     app, calls = make_app(tmp_path)
     try:
         app.show_panel(); app.update()
@@ -93,8 +92,6 @@ def test_scene_switch_only_shows_and_text_copies(tmp_path):
         app._render_expanded()
         app._select_section('常用网址')
         assert app.snapshot.document.active_scene_id == original and not calls
-        app._open_link(app.snapshot.links[1])
-        assert app.clipboard_get() == 'hello\nworld' and not calls
         assert app.title() == 'Floating Link Dock Scenes'
         app.toggle_expanded(); app.show_panel()
         assert app.is_expanded
@@ -141,7 +138,7 @@ def test_scene_tile_opens_all_openable_items_from_clicked_scene(tmp_path):
         deadline = time.monotonic() + 2
         while app._batch_context and time.monotonic() < deadline:
             app._poll_results(); app.update_idletasks(); time.sleep(.01)
-        assert sorted(calls) == sorted(i.id for i in scene.items if i.kind != 'text')
+        assert sorted(calls) == sorted(i.id for i in scene.items)
         assert '“产品开发”：已发出 4 项请求' in app.status_label.cget('text')
         assert app.snapshot.document.active_scene.name == '另一个'
     finally: app.destroy()

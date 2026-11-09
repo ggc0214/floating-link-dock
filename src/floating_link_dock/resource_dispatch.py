@@ -76,7 +76,6 @@ class ResourceDispatcher:
         if not items: raise ValueError('没有可打开的项目')
         if len({i.id for i in items}) != len(items): raise ValueError('项目ID不能重复')
         for item in items:
-            if item.kind == 'text': raise ValueError('文字请单击复制，不参与批量启动')
             validate_resource(ResourceDraft(item.kind, item.name, item.target, item.auto_open))
         with self._condition:
             self._expire()

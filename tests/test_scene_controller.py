@@ -9,7 +9,7 @@ def test_controller_scene_transactions_and_write_failure(tmp_path, monkeypatch):
     store = SceneStore(tmp_path / 'new', tmp_path / 'old'); store.initialize(False)
     c = SceneController(store); c.initialize()
     original = c.snapshot.document.active_scene_id
-    c.add_resource(ResourceDraft('text', '话术', 'hello'))
+    c.add_resource(ResourceDraft('url', '网站', 'example.com'))
     first = c.snapshot.links[0]
     c.duplicate_scene('复制')
     assert c.snapshot.links[0].id != first.id

@@ -2,13 +2,13 @@ import tkinter as tk
 from tkinter import filedialog
 import customtkinter as ctk
 from . import theme
-from .scene_models import ResourceDraft, batch_items, validate_resource
+from .scene_models import ResourceDraft, validate_resource
 from .tile_board import TileBoard
 from .platform_integration import installed_browsers
 
 # The existing folder kind can store either path without assuming a file extension.
-KINDS = {'网址': 'url', '文件 / 文件夹': 'folder', '应用': 'app', '常用文字': 'text'}
-BADGES = {'url': '网', 'file': '路径', 'folder': '路径', 'app': '应用', 'text': '字'}
+KINDS = {'网址': 'url', '文件 / 文件夹': 'folder', '应用': 'app'}
+BADGES = {'url': '网', 'file': '路径', 'folder': '路径', 'app': '应用'}
 
 
 class SceneBoard(TileBoard):
@@ -18,7 +18,7 @@ class SceneBoard(TileBoard):
         self._on_manage = on_manage
         for _, tile, scene in self._items.values():
             badge, title = tile.winfo_children()
-            badge.configure(text=f'{len(batch_items(scene))} 项', width=46, font=(theme.SCENE_FONT, 11, 'bold'))
+            badge.configure(text=f'{len(scene.items)} 项', width=46, font=(theme.SCENE_FONT, 11, 'bold'))
             if len(scene.name) > 12:
                 title.configure(text=f'{scene.name[:11]}…')
         if not scenes:
@@ -87,8 +87,7 @@ class ResourceEditor(ctk.CTkFrame):
         kind = KINDS[label]
         self.hint.configure(text={'url': '粘贴网页、飞书多维表或云文档链接',
                                    'folder': '粘贴完整路径，打开时自动识别文件或文件夹',
-                                   'app': '选择 .exe 程序或 .lnk 快捷方式，也可粘贴路径',
-                                   'text': '点击方块时复制以下文字'}[kind])
+                                   'app': '选择 .exe 程序或 .lnk 快捷方式，也可粘贴路径'}[kind])
         file_button, folder_button = self.browse_buttons
         file_button.configure(text='选择应用' if kind == 'app' else '选择文件',
                               state='normal' if kind in {'folder', 'app'} else 'disabled')
@@ -123,7 +122,7 @@ class ResourceBoard(TileBoard):
         menu = tk.Menu(self, tearoff=False, font=(theme.SCENE_FONT, 11), bg=theme.SURFACE, fg=theme.TEXT,
                        activebackground=theme.SURFACE_HOVER)
         menu.add_command(label=item.name, state='disabled')
-        menu.add_command(label='复制文字' if item.kind == 'text' else '打开', command=lambda: self._on_open(item))
+        menu.add_command(label='打开', command=lambda: self._on_open(item))
         if item.kind == 'url' and self._on_open_browser is not None:
             for browser in installed_browsers():
                 menu.add_command(label=f'使用 {browser.name} 打开',

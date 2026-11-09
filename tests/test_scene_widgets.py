@@ -5,17 +5,6 @@ from floating_link_dock.scene_widgets import ResourceBoard, ResourceEditor
 from floating_link_dock.scene_models import ResourceItem
 
 
-def test_resource_editor_keeps_multiline_text_and_clears_auto():
-    root = ctk.CTk(); output = []
-    try:
-        editor = ResourceEditor(root, item=ResourceItem('a', 'text', '话术', '第一行\n第二行', 0, auto_open=True),
-                                on_save=output.append, on_cancel=lambda: None)
-        editor._submit()
-        assert output[0].kind == 'text' and output[0].target == '第一行\n第二行'
-        assert not output[0].auto_open
-    finally: root.destroy()
-
-
 def test_picker_cancel_preserves_path(monkeypatch):
     root = ctk.CTk()
     try:

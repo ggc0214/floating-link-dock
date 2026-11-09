@@ -47,6 +47,24 @@ def test_invalid_legacy_is_not_modified(tmp_path):
     assert sorted(p.name for p in old.iterdir()) == ['links.json', 'settings.json']
 
 
+def test_load_skips_old_text_tiles_and_keeps_other_positions(tmp_path):
+    store = SceneStore(tmp_path / 'new', tmp_path / 'old')
+    store.initialize(False)
+    raw = json.loads(store.path.read_text(encoding='utf-8'))
+    raw['scenes'][0]['items'] = [
+        {'id': 'text', 'kind': 'text', 'name': '话术', 'target': '旧内容', 'order': 0, 'x': 8, 'y': 8},
+        {'id': 'web', 'kind': 'url', 'name': '网站', 'target': 'https://example.com', 'order': 1, 'x': 90, 'y': 8},
+    ]
+    store.path.write_text(json.dumps(raw), encoding='utf-8')
+
+    doc, warnings = store.load()
+    assert not warnings
+    assert [(item.id, item.order, item.x, item.y) for item in doc.active_scene.items] == [('web', 0, 90, 8)]
+    assert json.loads(store.path.read_text(encoding='utf-8')) == raw
+    store.save(doc)
+    assert store.load() == (doc, ())
+
+
 @pytest.mark.parametrize('change', ['duplicate', 'boolean', 'active'])
 def test_bad_document_recovery(tmp_path, change):
     store = SceneStore(tmp_path / 'new', tmp_path / 'old'); store.initialize(False)
