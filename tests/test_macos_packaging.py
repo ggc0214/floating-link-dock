@@ -22,7 +22,12 @@ def test_bundle_minimum_covers_compiled_dependencies(tmp_path, minimum, expected
     assert module['minimum_system_version'](tmp_path) == expected
 
 
-def test_bundle_plist_and_inputs(tmp_path, monkeypatch):
+@pytest.mark.parametrize('scenes,name,launcher,bundle_id', [
+    ('0', 'FloatingLinkDock', 'launcher.py', 'cn.floatinglinkdock.app'),
+    ('1', 'FloatingLinkDockScenes', 'launcher_scenes.py', 'cn.floatinglinkdock.scenes'),
+])
+def test_bundle_plist_and_inputs(tmp_path, monkeypatch, scenes, name, launcher, bundle_id):
+    monkeypatch.setenv('FLOATING_LINK_DOCK_BUILD_SCENES', scenes)
     (tmp_path / 'Python').write_bytes(struct.pack('<8I6I',
         0xfeedfacf, 0x100000c, 0, 2, 1, 24, 0, 0,
         0x32, 24, 1, 26 << 16, 26 << 16, 0))
@@ -30,6 +35,7 @@ def test_bundle_plist_and_inputs(tmp_path, monkeypatch):
     monkeypatch.setattr(PyInstaller.utils.hooks, 'collect_data_files', lambda name: [('public', name)])
     captured = {}
     def analysis(*args, **kwargs):
+        captured['entry'] = args[0]
         captured['analysis'] = kwargs
         return SimpleNamespace(pure=[], scripts=[], binaries=[], datas=[])
     def bundle(*args, **kwargs):
@@ -44,7 +50,9 @@ def test_bundle_plist_and_inputs(tmp_path, monkeypatch):
     final_plist = plistlib.loads(plistlib.dumps(captured['bundle']['info_plist']))
     assert final_plist['LSUIElement'] is True
     assert final_plist['LSMinimumSystemVersion'] == '26.0.0'
-    assert final_plist['CFBundleIdentifier'] == 'cn.floatinglinkdock.app'
+    assert final_plist['CFBundleIdentifier'] == bundle_id
+    assert captured['bundle']['name'] == f'{name}.app'
+    assert captured['entry'] == [launcher]
     assert captured['exe']['target_arch'] == 'arm64'
     assert 'pystray._darwin' in captured['analysis']['hiddenimports']
     assert 'floating_link_dock.macos_lifecycle' in captured['analysis']['hiddenimports']

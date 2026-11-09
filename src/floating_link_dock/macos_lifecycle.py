@@ -13,9 +13,10 @@ LABEL = 'cn.floatinglinkdock.launcher'
 
 
 class StartupManager:
-    def __init__(self, executable: Path, *, agents_dir: Path | None = None):
+    def __init__(self, executable: Path, *, agents_dir: Path | None = None, label: str = LABEL):
         self.executable = executable.absolute()
-        self.path = (agents_dir or Path.home() / 'Library/LaunchAgents') / f'{LABEL}.plist'
+        self.label = label
+        self.path = (agents_dir or Path.home() / 'Library/LaunchAgents') / f'{label}.plist'
 
     def _configuration(self):
         if not self.path.exists():
@@ -53,9 +54,9 @@ class StartupManager:
                 self.path.unlink(missing_ok=True)
                 return
             self.path.parent.mkdir(parents=True, exist_ok=True)
-            with tempfile.NamedTemporaryFile(dir=self.path.parent, prefix=LABEL, suffix='.tmp', delete=False) as stream:
+            with tempfile.NamedTemporaryFile(dir=self.path.parent, prefix=self.label, suffix='.tmp', delete=False) as stream:
                 temporary = Path(stream.name)
-                plistlib.dump({'Label': LABEL, 'ProgramArguments': ['/usr/bin/open', str(self.executable)],
+                plistlib.dump({'Label': self.label, 'ProgramArguments': ['/usr/bin/open', str(self.executable)],
                               'RunAtLoad': True}, stream)
                 stream.flush(); os.fsync(stream.fileno())
             os.chmod(temporary, 0o600)

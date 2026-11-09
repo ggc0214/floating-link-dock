@@ -125,8 +125,8 @@ def test_scene_tile_opens_all_openable_items_from_clicked_scene(tmp_path):
         app.show_panel()
         app.snapshot = app.controller.duplicate_scene('产品开发')
         for draft in [ResourceDraft('url', '飞书多维表', 'https://www.feishu.cn/base/demo'),
-                      ResourceDraft('file', '成本', r'\\NAS\share\成本.xlsx'),
-                      ResourceDraft('folder', '资料', r'\\NAS\share')]:
+                      ResourceDraft('file', '成本', str(tmp_path / '成本.xlsx')),
+                      ResourceDraft('folder', '资料', str(tmp_path))]:
             app.snapshot = app.controller.add_resource(draft)
         scene = app.snapshot.document.active_scene
         app.snapshot = app.controller.create_scene('另一个')
@@ -178,8 +178,8 @@ def test_scene_menu_renames_and_deletes_clicked_tile(tmp_path, monkeypatch):
         active = app.snapshot.document.active_scene
         app._select_section('工作场景')
         monkeypatch.setattr(tk.Menu, 'tk_popup', lambda menu, *a: menus.append(menu))
-        monkeypatch.setattr('floating_link_dock.scene_window.simpledialog.askstring',
-                            lambda *args, **kwargs: '改名后的场景')
+        monkeypatch.setattr(app, '_ask_scene_name',
+                            lambda title, initialvalue, save: save('改名后的场景'))
         event = SimpleNamespace(x_root=10, y_root=10)
         app.board._context_click(target.id, event)
         menus[-1].invoke('重命名场景')

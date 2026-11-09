@@ -1,4 +1,5 @@
 from dataclasses import dataclass, asdict
+import sys
 import tkinter as tk
 from tkinter import messagebox, simpledialog
 import customtkinter as ctk
@@ -8,7 +9,7 @@ from .window import FloatingDockWindow
 from .scene_controller import SceneController
 from .scene_models import ResourceItem
 from .scene_widgets import ResourceBoard, ResourceEditor, SceneBoard
-from .resource_dispatch import ResourceDispatcher, open_windows_path
+from .resource_dispatch import ResourceDispatcher, open_macos_path, open_windows_path
 from .platform_integration import open_in_default_browser, open_in_browser
 from .scene_main import TITLE, APP_ID, report_scene_error
 from .scene_icons import build_scene_icon, SCENE_ACCENT, SCENE_HOVER, SCENE_BORDER
@@ -38,7 +39,8 @@ class ScenesWindow(FloatingDockWindow):
         document = controller.snapshot.document
         self._section = '常用网址' if document.active_scene_id == self._common_scene_id else '工作场景'
         self._configuring_scene = False
-        self.dispatcher = dispatcher or ResourceDispatcher(open_url_item, open_windows_path)
+        open_path = open_macos_path if sys.platform == 'darwin' else open_windows_path
+        self.dispatcher = dispatcher or ResourceDispatcher(open_url_item, open_path)
         self._batch_context = {}
         self._status_text = ''
         self._closed = False
@@ -219,6 +221,59 @@ class ScenesWindow(FloatingDockWindow):
         try: menu.tk_popup(*self.winfo_pointerxy())
         finally: menu.grab_release()
 
+    def _ask_scene_name(self, title, initialvalue, on_save):
+        if sys.platform != 'darwin':
+            name = simpledialog.askstring(title, '场景名称', parent=self, initialvalue=initialvalue)
+            if name is not None:
+                on_save(name)
+            return
+
+        # Keep the name editor inside the Mac floating window so it cannot block behind it.
+        if self._scene_tools is not None:
+            self._scene_tools.destroy()
+        editor = ctk.CTkFrame(self, fg_color='transparent')
+        self._scene_tools = editor
+        editor.grid(row=1, column=0, sticky='ew', padx=12, pady=(0, 8))
+        editor.grid_columnconfigure(0, weight=1)
+        ctk.CTkLabel(editor, text=title, text_color=theme.TEXT,
+                     font=(theme.SCENE_FONT, 13)).grid(row=0, column=0, columnspan=3, sticky='w')
+        entry = ctk.CTkEntry(editor, placeholder_text='场景名称', font=(theme.SCENE_FONT, 13))
+        entry.grid(row=1, column=0, sticky='ew', padx=(0, 6))
+        if initialvalue:
+            entry.insert(0, initialvalue)
+            entry.select_range(0, 'end')
+        error = ctk.CTkLabel(editor, text='', text_color=theme.DANGER, wraplength=300)
+
+        def save():
+            try:
+                on_save(entry.get())
+            except (ValueError, OSError) as exc:
+                error.configure(text=str(exc))
+                error.grid(row=2, column=0, columnspan=3, sticky='w')
+
+        self._button(editor, '取消', self._render_expanded, 50).grid(row=1, column=1, padx=(0, 4))
+        self._button(editor, '保存', save, 50).grid(row=1, column=2)
+        entry.bind('<Return>', lambda event: save())
+        entry.bind('<Escape>', lambda event: self._render_expanded())
+        editor.after_idle(entry.focus_force)
+
+    def _save_scene_name(self, action, scene_id, current_id, name):
+        if action == 'rename':
+            self.snapshot = self.controller.rename_scene(name, scene_id=current_id)
+        elif action == 'duplicate':
+            self.snapshot = self.controller.duplicate_scene(name)
+        else:
+            self.snapshot = self.controller.create_scene(name)
+        self._finish_scene_change(configuring=scene_id is None)
+
+    def _finish_scene_change(self, *, configuring):
+        self._section = '工作场景'
+        self._configuring_scene = configuring
+        self._status_text = ''
+        self._show_editor = False
+        self._editing = None
+        self._render_expanded()
+
     def _manage_scene(self, action, scene_id=None):
         document = self.snapshot.document
         try:
@@ -235,19 +290,10 @@ class ScenesWindow(FloatingDockWindow):
                 self.snapshot = self.controller.delete_scene(current.id, fallback_scene_id=fallback)
             else:
                 titles = {'create': '新建场景', 'rename': '重命名场景', 'duplicate': '复制场景'}
-                name = simpledialog.askstring(titles[action], '场景名称', parent=self,
-                         initialvalue=current.name if action == 'rename' else '')
-                if name is None: return
-                if action == 'rename':
-                    self.snapshot = self.controller.rename_scene(name, scene_id=current.id)
-                elif action == 'duplicate':
-                    self.snapshot = self.controller.duplicate_scene(name)
-                else:
-                    self.snapshot = self.controller.create_scene(name)
-            self._section = '工作场景'
-            self._configuring_scene = scene_id is None and action != 'delete'
-            self._status_text = ''
-            self._show_editor = False; self._editing = None; self._render_expanded()
+                self._ask_scene_name(titles[action], current.name if action == 'rename' else '',
+                                     lambda name: self._save_scene_name(action, scene_id, current.id, name))
+                return
+            self._finish_scene_change(configuring=False)
         except (ValueError, OSError) as exc: self._error(exc)
 
     def _begin_add(self):

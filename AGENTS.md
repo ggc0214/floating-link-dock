@@ -1,20 +1,7 @@
-# Mac continuation instructions
+# Apple Silicon 工作场景版交接
 
-This folder is the latest source handoff for the FloatingLinkDock Apple Silicon version. The design and implementation plan are already approved. Do not restart design or use an older GitHub checkout in place of these files.
+先读 README-MAC.md。当前目录以 Windows 工作场景版 v1.2.2 源码为基础，增加了 macOS 适配。在 Apple Silicon Mac 上继续构建和验收。
 
-Read first:
-- docs/macos/交付状态.md
-- docs/macos/使用说明.md
-- docs/macos/实施记录.md
-- docs/superpowers/specs/2026-10-08-macos-arm64-design.md
-- docs/superpowers/plans/2026-10-08-macos-arm64.md
-
-Continue on this Mac: inspect macOS/Python/Tk and arm64 architecture; use a project-specific virtual environment; install requirements-dev.txt; run the full test suite; fix failures with focused regression tests; run bash scripts/build_macos.sh. Keep build outputs under dist/macos-arm64.
-
-The Windows-host test evidence is historical, not Mac acceptance. Native .app building, menu/Tk coexistence, Retina/multimonitor geometry, Finder reopening, real POSIX process locks, browser opening, login startup, and second-machine sharing still require Mac validation. Report any validation that needs the user's interaction.
-
-Preserve Windows functionality and existing changes. Do not export personal URLs, credentials, auth/config files, or logs. Do not use sudo or disable system-wide security checks. Do not push, create cloud jobs, publish, purchase signing services or use Apple credentials without explicit authorization. Ad-hoc signing is not Developer ID signing or notarization.
-
-This ZIP has no .git history and contains uncommitted current working files. Do not initialize a repository or pretend the previous local branch exists here unless the user requests repository setup. Use the portable relative paths above, not embedded old D:/xuanfu paths in historical notes.
-
-Use a visualization only when it materially helps explain a complex relationship.
+- 使用独立的 arm64 Python 虚拟环境，安装 requirements-dev.txt。先检查 Tk 能在登录桌面运行，再执行 `PYTHON=.venv/bin/python bash scripts/build_macos.sh --scenes`。
+- Windows 上可验证数据隔离、路径校验和打包配置。Mac 上还需验证窗口首次展开、菜单栏、重复启动、应用选择器、实际文件关联和 NAS 文件夹打开。验收请使用示例配置。
+- 保留原常用网址版和 Windows 入口。此交接包只包含源码和公开示例。不要导出个人配置、账号或凭据，也不要在没有明确授权时推送、发布或使用 Apple 签名凭据。
