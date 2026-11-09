@@ -37,6 +37,13 @@ class StartupPort(Protocol):
 
 
 class FloatingDockWindow(ctk.CTk):
+    _floating_color = theme.ACCENT
+    _floating_hover = theme.ACCENT_HOVER
+    _floating_border = theme.BORDER
+
+    def _build_mark(self):
+        return build_face_icon()
+
     def __init__(self, controller: AppController, startup: StartupPort) -> None:
         ctk.set_appearance_mode("light")
         super().__init__(fg_color=theme.BACKGROUND)
@@ -58,16 +65,14 @@ class FloatingDockWindow(ctk.CTk):
             self.snapshot.settings.y if self.snapshot.settings.y is not None else 120,
         )
         self._reduced_motion = system_reduces_motion()
-        face = build_face_icon()
+        face = self._build_mark()
         self._button_face = ctk.CTkImage(light_image=face, dark_image=face, size=(32, 32))
         self._header_face = ctk.CTkImage(light_image=face, dark_image=face, size=(26, 26))
 
         self.title("Floating Link Dock")
         self.minsize(theme.COLLAPSED_SIZE, theme.COLLAPSED_SIZE)
         if sys.platform == 'darwin':
-            # Override-redirect makes Tk's Aqua window a non-activating help
-            # window. Forced Entry focus only masks that until the next render.
-            # Keep a managed window eligible for keyboard focus, without chrome.
+            # Keep the managed Aqua window eligible for keyboard focus.
             self.attributes('-stylemask', ())
         else:
             self.overrideredirect(True)
@@ -213,11 +218,11 @@ class FloatingDockWindow(ctk.CTk):
             width=theme.COLLAPSED_SIZE,
             height=theme.COLLAPSED_SIZE,
             corner_radius=10,
-            fg_color=theme.ACCENT,
-            hover_color=theme.ACCENT_HOVER,
+            fg_color=self._floating_color,
+            hover_color=self._floating_hover,
             text_color=theme.TEXT,
             border_width=2,
-            border_color=theme.BORDER,
+            border_color=self._floating_border,
             font=("Segoe UI Symbol", 30, "bold"),
         )
         button.pack(fill="both", expand=True)

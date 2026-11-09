@@ -5,8 +5,8 @@ from .storage import StoragePaths
 from .platform_integration import show_startup_error
 
 
-def report_error(exc: BaseException, parent=None) -> None:
-    log = StoragePaths.for_user().root / "errors.log"
+def report_error(exc: BaseException, parent=None, *, root=None) -> None:
+    log = (root if root is not None else StoragePaths.for_user().root) / "errors.log"
     try:
         log.parent.mkdir(parents=True, exist_ok=True)
         if log.exists() and log.stat().st_size > 1_000_000:

@@ -2,6 +2,17 @@
 
 一个轻量的 Windows 桌面悬浮网址盒。收起时只占一个小按钮，单击后展开常用网站列表。
 
+## 两款 Windows 应用
+
+| 应用 | 启动文件 | 用途 |
+|---|---|---|
+| [常用网址版](https://github.com/ggc0214/floating-link-dock/releases/tag/v1.2.0-windows-links) | `FloatingLinkDock.exe` | 绿色笑脸，单击方块打开常用网站 |
+| [工作场景版](https://github.com/ggc0214/floating-link-dock/releases/tag/v1.2.0-windows-scenes) | `FloatingLinkDockScenes.exe` | 蓝色四宫格，支持将网址、文件、文件夹和应用一起启动 |
+
+两款应用可以同时运行，各自保存配置。工作场景版的操作步骤见[使用说明](docs/work-scenes/使用说明.md)。
+
+本分支可从源码运行两款应用。安装依赖后，执行 `python launcher.py` 启动常用网址版，执行 `python launcher_scenes.py` 启动工作场景版。打包分别使用 `FloatingLinkDock.spec` 和 `FloatingLinkDockScenes.spec`。
+
 ## 功能
 
 - 始终置顶的无边框悬浮按钮，可拖到桌面任意位置。
