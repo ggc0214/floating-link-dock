@@ -5,10 +5,11 @@
 ## 构建
 
 1. 把源码 ZIP 传到 M 系列 Mac 并解压。在 Mac 的 Codex 里打开整个 `FloatingLinkDockScenes-mac-arm64-source` 文件夹。
-2. 在 Mac 的登录桌面中使用带 Tk 的原生 arm64 Python。运行 `python3 -m tkinter` 时应弹出 Tk 测试窗口，关闭该窗口后执行以下命令。
+2. 在 Mac 的登录桌面中使用原生 arm64 Python 和支持 `-stylemask` 的 Tk。下面的构建命令使用 Homebrew Python 3.13 和配套的 Tk。
 
 ~~~bash
-python3 -m venv .venv
+brew install python@3.13 python-tk@3.13
+"$(brew --prefix python@3.13)/bin/python3.13" -m venv .venv
 .venv/bin/python -m pip install -r requirements-dev.txt
 PYTHON=.venv/bin/python bash scripts/build_macos.sh --scenes
 ~~~

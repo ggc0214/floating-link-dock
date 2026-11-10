@@ -24,17 +24,17 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
-        with:
-          python-version: '3.13'
-          architecture: arm64
-      - run: python -m pip install -r requirements-dev.txt
-      - run: PYTHON=python bash scripts/build_macos.sh --scenes
+      - name: Set up Apple Silicon Python and Tk
+        run: |
+          brew install python@3.13 python-tk@3.13
+          "$(brew --prefix python@3.13)/bin/python3.13" -m venv .venv
+          .venv/bin/python -m pip install -r requirements-dev.txt
+      - run: PYTHON=.venv/bin/python bash scripts/build_macos.sh --scenes
       - name: Launch the packaged work scenes app
         shell: bash
         run: |
           open -n dist/macos-scenes-arm64/FloatingLinkDockScenes.app
-          python - <<'PY'
+          .venv/bin/python - <<'PY'
           from pathlib import Path
           import json
           import time
