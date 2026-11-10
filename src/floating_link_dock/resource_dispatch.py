@@ -31,8 +31,14 @@ def open_windows_path(item):
             raise OSError('找不到应用，请重新选择程序或快捷方式') from exc
         validate_resource(replace(draft, target=str(program)))
         if not S_ISREG(mode):
-            raise ValueError('请选择实际的 .exe 程序或 .lnk 快捷方式')
-        if program.suffix.lower() == '.lnk':
+            raise ValueError('请选择实际的 .exe 程序、.lnk 快捷方式或 .bat 批处理')
+        if program.suffix.lower() == '.bat':
+            cmd = Path(os.environ['SystemRoot']) / 'System32/cmd.exe'
+            env = dict(os.environ, FLOATING_LINK_DOCK_BATCH_PATH=str(program))
+            # Expand the quoted path once, keeping literal % and ! in filenames.
+            command_line = f'"{cmd}" /d /v:off /s /c ""%FLOATING_LINK_DOCK_BATCH_PATH%""'
+            subprocess.Popen(command_line, executable=cmd, cwd=program.parent, env=env, shell=False)
+        elif program.suffix.lower() == '.lnk':
             os.startfile(str(program))
         else:
             subprocess.Popen([str(program)], cwd=program.parent, shell=False)

@@ -83,6 +83,54 @@ def test_add_application_and_launch_alone_and_in_scene(tmp_path, monkeypatch):
         app.destroy()
 
 
+@pytest.mark.skipif(sys.platform != 'win32', reason='runs a local Windows batch fixture')
+def test_batch_file_can_be_picked_and_run_alone_and_in_scene(tmp_path, monkeypatch):
+    script_dir = tmp_path / 'Batch files & reports'
+    script_dir.mkdir()
+    script = script_dir / 'Build & report %USERNAME%.BAT'
+    script.write_bytes(b'@echo off\r\n>>result.txt echo ran\r\n')
+    marker = script_dir / 'result.txt'
+    app, url_calls = make_app(tmp_path)
+    app.dispatcher._open_path = open_windows_path
+
+    def choose(**options):
+        assert '*.bat' in options['filetypes'][0][1]
+        return str(script)
+
+    def wait_for_runs(count):
+        deadline = time.monotonic() + 8
+        while time.monotonic() < deadline:
+            app._poll_results()
+            if not app._batch_context and marker.exists() and marker.read_text().count('ran') == count:
+                return
+            time.sleep(.02)
+        pytest.fail(f'The script did not run {count} time(s)')
+
+    monkeypatch.setattr('floating_link_dock.scene_widgets.filedialog.askopenfilename', choose)
+    try:
+        app.show_panel()
+        app.snapshot = app.controller.duplicate_scene('Batch scene')
+        app._select_section('工作场景')
+        app._configure_scene(app.snapshot.document.active_scene)
+        app.add_button.invoke()
+        editor = app.editor
+        editor.kind_menu.set('应用')
+        editor._kind_changed('应用')
+        editor.name_entry.insert(0, '运行报表')
+        editor.browse_buttons[0].invoke()
+        assert editor.target_entry.get('1.0', 'end-1c') == str(script)
+        editor._submit()
+        scene = app.controller.store.load()[0].active_scene
+        assert scene.items[-1].target == str(script)
+        app._open_link(scene.items[-1])
+        wait_for_runs(1)
+        app._launch_scene(scene)
+        wait_for_runs(2)
+        assert url_calls == [scene.items[0].id]
+    finally:
+        app.destroy()
+
+
 def test_scene_switch_only_shows(tmp_path):
     app, calls = make_app(tmp_path)
     try:

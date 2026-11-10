@@ -7,7 +7,7 @@
 | 应用 | 启动文件 | 用途 |
 |---|---|---|
 | [常用网址版](https://github.com/ggc0214/floating-link-dock/releases/tag/v1.2.0-windows-links) | `FloatingLinkDock.exe` | 绿色笑脸，单击方块打开常用网站 |
-| [工作场景版](https://github.com/ggc0214/floating-link-dock/releases/tag/v1.2.2-windows-scenes) | `FloatingLinkDockScenes.exe` | 蓝色四宫格，支持将网址、文件、文件夹和应用一起启动 |
+| [工作场景版](https://github.com/ggc0214/floating-link-dock/releases/tag/v1.2.3-windows-scenes) | `FloatingLinkDockScenes.exe` | 蓝色四宫格，支持将网址、文件、文件夹和应用一起启动 |
 
 两款应用可以同时运行，各自保存配置。工作场景版的操作步骤见[使用说明](docs/work-scenes/使用说明.md)。
 

@@ -87,7 +87,7 @@ class ResourceEditor(ctk.CTkFrame):
         kind = KINDS[label]
         self.hint.configure(text={'url': '粘贴网页、飞书多维表或云文档链接',
                                    'folder': '粘贴完整路径，打开时自动识别文件或文件夹',
-                                   'app': '选择 .exe 程序或 .lnk 快捷方式，也可粘贴路径'}[kind])
+                                   'app': '选择 .exe、.lnk 或 .bat，也可粘贴路径'}[kind])
         file_button, folder_button = self.browse_buttons
         file_button.configure(text='选择应用' if kind == 'app' else '选择文件',
                               state='normal' if kind in {'folder', 'app'} else 'disabled')
@@ -96,7 +96,7 @@ class ResourceEditor(ctk.CTkFrame):
     def _browse(self, chooser):
         if KINDS[self.kind_menu.get()] == 'app':
             value = chooser(parent=self, title='选择应用',
-                            filetypes=[('应用和快捷方式', ('*.exe', '*.lnk'))])
+                            filetypes=[('应用、快捷方式和批处理', ('*.exe', '*.lnk', '*.bat'))])
         else:
             value = chooser(parent=self, title='选择共享目录或本地目标')
         if value:

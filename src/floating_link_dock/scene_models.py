@@ -107,8 +107,8 @@ def validate_resource(draft):
             if len(target) >= 2 and target[0] == target[-1] == '"':
                 target = target[1:-1]
         target = validate_windows_path(target)
-        if draft.kind == 'app' and (target.startswith('\\\\') or ntpath.splitext(target)[1].lower() not in {'.exe', '.lnk'}):
-            raise ValueError('请选择盘符下的 .exe 程序或 .lnk 快捷方式')
+        if draft.kind == 'app' and (target.startswith('\\\\') or ntpath.splitext(target)[1].lower() not in {'.exe', '.lnk', '.bat'}):
+            raise ValueError('请选择盘符下的 .exe 程序、.lnk 快捷方式或 .bat 批处理')
         if draft.kind == 'file' and ntpath.splitext(target)[1].lower() not in FILE_TYPES:
             raise ValueError('暂不支持此文件类型；请使用日常文档或图片，不支持程序、脚本和快捷方式')
     return replace(draft, name=name, target=target)
