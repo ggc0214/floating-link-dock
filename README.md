@@ -9,7 +9,7 @@
 | Windows 工作场景版 | v1.2.3 | [下载 EXE](https://github.com/ggc0214/floating-link-dock/releases/download/v1.2.3-windows-scenes/FloatingLinkDockScenes.exe) | [Windows 工作场景源码](https://github.com/ggc0214/floating-link-dock/tree/codex/windows-scenes-release) |
 | Mac 工作场景版（M 系列，macOS 26.0 或更新版本） | v1.3.0 | [下载 ZIP](https://github.com/ggc0214/floating-link-dock/releases/download/v1.3.0-macos-arm64-scenes/FloatingLinkDockScenes-macos-arm64.zip) | [Mac 工作场景源码](https://github.com/ggc0214/floating-link-dock/tree/codex/macos-arm64-scenes) |
 | Windows 常用网址版（绿色笑脸） | v1.2.0 | [下载 EXE](https://github.com/ggc0214/floating-link-dock/releases/download/v1.2.0-windows-links/FloatingLinkDock.exe) | [常用网址版源码](https://github.com/ggc0214/floating-link-dock/tree/v1.2.0-windows-links) |
-| Mac 常用网址版（M 系列，macOS 26.0 或更新版本） | v1.2.0 试用版 | [下载 ZIP](https://github.com/ggc0214/floating-link-dock/releases/download/v1.2.0-macos-input-fix-2/FloatingLinkDock-macos-arm64-input-fix-2.zip) | [Mac 常用网址版源码](https://github.com/ggc0214/floating-link-dock/tree/v1.2.0-macos-input-fix-2) |
+| Mac 常用网址版（M 系列，macOS 26.0 或更新版本） | v1.2.0 | [下载 ZIP](https://github.com/ggc0214/floating-link-dock/releases/download/v1.2.0-macos-input-fix-2/FloatingLinkDock-macos-arm64-input-fix-2.zip) | [Mac 常用网址版源码](https://github.com/ggc0214/floating-link-dock/tree/v1.2.0-macos-input-fix-2) |
 
 ## 工作场景版怎么用
 
