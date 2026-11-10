@@ -1,7 +1,9 @@
 """Pure scene data and validation: no filesystem/network calls here."""
 from dataclasses import dataclass, field, replace
 import ntpath
+from pathlib import PurePosixPath
 import re
+import sys
 from uuid import uuid4
 
 from .link_service import normalize_url
@@ -101,6 +103,14 @@ def validate_resource(draft):
     target = draft.target
     if draft.kind == 'url':
         target = normalize_url(target)
+    elif sys.platform == 'darwin':
+        if not target.startswith('/') or any(ord(char) < 32 for char in target):
+            raise ValueError('请选择完整的 Mac 路径，NAS 请先在 Finder 中连接')
+        suffix = PurePosixPath(target).suffix.lower()
+        if draft.kind == 'app' and suffix != '.app':
+            raise ValueError('请选择 .app 应用')
+        if draft.kind == 'file' and suffix not in FILE_TYPES:
+            raise ValueError('暂不支持此文件类型，请选择日常文档或图片')
     else:
         if draft.kind == 'app':
             target = target.strip()

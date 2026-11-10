@@ -71,13 +71,13 @@ def test_create_scene_inside_work_keeps_common_resources_and_can_delete_last_wor
         app.show_panel()
         common_items = app.snapshot.links
         app._select_section('工作场景')
-        monkeypatch.setattr('floating_link_dock.scene_window.simpledialog.askstring', lambda *a, **kw: '产品开发')
+        monkeypatch.setattr(app, '_ask_scene_name', lambda title, initialvalue, save: save('产品开发'))
         app.add_button.invoke()
         assert app.section_switch.get() == '工作场景'
         assert app.snapshot.document.active_scene.name == '产品开发'
         assert app.add_button.cget('text') == '＋ 添加'
         assert not app.snapshot.links
-        app.snapshot = app.controller.add_resource(ResourceDraft('folder', '资料', r'\\NAS\share'))
+        app.snapshot = app.controller.add_resource(ResourceDraft('folder', '资料', str(tmp_path)))
         work_id = app.snapshot.document.active_scene_id
         app._select_section('常用网址')
         assert app.snapshot.links == common_items
@@ -97,7 +97,7 @@ def test_cancel_new_scene_leaves_work_empty(tmp_path, monkeypatch):
     app, calls = make_app(tmp_path)
     try:
         app.show_panel(); app._select_section('工作场景')
-        monkeypatch.setattr('floating_link_dock.scene_window.simpledialog.askstring', lambda *a, **kw: None)
+        monkeypatch.setattr(app, '_ask_scene_name', lambda *a, **kw: None)
         app._manage_scene('create')
         assert len(app.snapshot.document.scenes) == 1 and app.board._items == {}
     finally: app.destroy()
@@ -108,7 +108,7 @@ def test_deleting_selected_work_scene_selects_another_work_not_common(tmp_path, 
     try:
         app.show_panel(); app._select_section('工作场景')
         for name in ['开发一', '开发二']:
-            monkeypatch.setattr('floating_link_dock.scene_window.simpledialog.askstring', lambda *a, n=name, **kw: n)
+            monkeypatch.setattr(app, '_ask_scene_name', lambda title, initialvalue, save, n=name: save(n))
             app._manage_scene('create')
         monkeypatch.setattr('floating_link_dock.scene_window.messagebox.askyesno', lambda *a, **kw: True)
         app._manage_scene('delete')

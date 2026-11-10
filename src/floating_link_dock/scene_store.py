@@ -11,7 +11,7 @@ from uuid import uuid4
 from .models import AppSettings
 from .scene_models import (ResourceDraft, ResourceItem, Scene, SceneDocument,
                            empty_document, validate_resource, validate_scene_name)
-from .storage import JsonStore
+from .storage import JsonStore, StoragePaths
 from .tile_layout import next_tile_position
 
 
@@ -32,9 +32,9 @@ def _settings(raw, importing=False):
 
 class SceneStore:
     def __init__(self, root=None, legacy_root=None):
-        base = Path(os.environ.get('LOCALAPPDATA', Path.home() / 'AppData/Local'))
-        self.root = Path(root) if root is not None else base / 'FloatingLinkDockScenes'
-        self.legacy_root = Path(legacy_root) if legacy_root is not None else base / 'FloatingLinkDock'
+        classic = StoragePaths.for_user().root
+        self.root = Path(root) if root is not None else classic.with_name('FloatingLinkDockScenes')
+        self.legacy_root = Path(legacy_root) if legacy_root is not None else classic
         if self.root.absolute() == self.legacy_root.absolute():
             raise ValueError('场景版与原版不能使用相同数据目录')
         self.path = self.root / 'scenes.json'

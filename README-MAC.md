@@ -1,15 +1,29 @@
-# 在 Mac 上继续这个项目
+# 在 Apple Silicon Mac 上继续工作场景版
 
-这是最新源码交接目录。本机已生成Mac验收应用，详见 `docs/macos/交付状态.md`。当前安装包最低要求macOS 26，尚未完成全部人工与第二台Mac验收。
+这个源码包以 Windows 工作场景版 v1.2.2 为基础。蓝色四宫格的工作场景版可配置网址、文档、文件夹和应用。单击场景方块会请求系统打开该场景内的各个项目。
 
-1. 把整个 ZIP 传到 M 系列 Mac，双击解压。
-2. 在 Mac 的 Codex 中打开解压后的 `xuanfu-mac` 文件夹（不是 ZIP，也不是里面的 src 文件夹）。
-3. 新建聊天，发送下面这句话：
+## 构建
 
-> 请先阅读根目录 AGENTS.md 和 docs/macos/交付状态.md，继续已批准的 Mac 版本实施。在本机完成测试、构建 .app 和 ZIP，并验证原生交互。保留 Windows 功能，不擅自推送或发布；需要我手动验收的地方告诉我。
+1. 把源码 ZIP 传到 M 系列 Mac 并解压。在 Mac 的 Codex 里打开整个 `FloatingLinkDockScenes-mac-arm64-source` 文件夹。
+2. 在 Mac 的登录桌面中使用带 Tk 的原生 arm64 Python。运行 `python3 -m tkinter` 时应弹出 Tk 测试窗口，关闭该窗口后执行以下命令。
 
-根目录 AGENTS.md 已包含交接边界，Codex 不必依赖之前 Windows 的聊天记录。完整方案、计划、审查修复记录和使用说明都在 docs 中。
+~~~bash
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements-dev.txt
+PYTHON=.venv/bin/python bash scripts/build_macos.sh --scenes
+~~~
 
-目标 macOS 13 或以上、Apple Silicon，实际最低版本需实测。构建需要 arm64 Python 3.11 或以上和 Tk；请让 Codex先检查环境，在项目虚拟环境中安装依赖。
+构建通过后，在 `dist/macos-scenes-arm64` 找到 `FloatingLinkDockScenes.app` 和 `FloatingLinkDockScenes-macos-arm64.zip`。脚本会检查 arm64 架构、依赖决定的最低 macOS 版本和本地签名。分享给其他 Mac 用户前，应实测启动与交互。本地签名尚未经过 Apple 公证。
 
-本机构建输出 `dist/macos-arm64/FloatingLinkDock.app` 和 `FloatingLinkDock-macos-arm64.zip`，采用本地临时签名，未做Apple公证。源码ZIP仍不能直接作为应用运行。
+## 使用
+
+- 双击 `FloatingLinkDockScenes.app`。菜单栏的蓝色四宫格可唤回窗口。首次运行如果发现旧常用网址版数据，可以选择复制网址和布局。
+- 在「工作场景」点「＋ 场景」，添加所需项目。应用请选择本机的 `.app`，例如 `/Applications/WeChat.app`。
+- NAS 先在 Finder 用 `⌘K` 连接共享目录，再从「文件 / 文件夹」选择已挂载的文件或目录。也可以粘贴 `/Volumes/共享名/目录` 形式的路径。
+- 返回后单击场景方块即可启动。右键场景方块可以编辑、重命名或删除。
+
+工作场景版使用 `~/Library/Application Support/FloatingLinkDockScenes`。绿色常用网址版使用自己的配置目录，两款应用可以同时运行。
+
+## 交给 Mac 上的 Codex
+
+> 请阅读 AGENTS.md 和 README-MAC.md，检查这台 Mac 的 arm64 Python 和 Tk，在本机完成工作场景版 .app 打包，并实际验证首次打开、菜单栏、应用选择、场景一键打开和与旧版共存。

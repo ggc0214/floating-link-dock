@@ -30,6 +30,6 @@ def test_scenes_error_log_never_uses_old_profile(monkeypatch, tmp_path):
     assert not (tmp_path / 'FloatingLinkDock').exists()
 
 
-def test_non_windows_entry_refuses_before_windows_api(monkeypatch):
-    monkeypatch.setattr(sys, 'platform', 'darwin')
+def test_unsupported_platform_refuses_before_loading_os_services(monkeypatch):
+    monkeypatch.setattr(sys, 'platform', 'linux')
     assert scene_main.main() == 2

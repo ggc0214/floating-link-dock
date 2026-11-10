@@ -20,6 +20,10 @@ NAS 文件可通过 Windows 的共享路径添加。Mac 先在 Finder 连接共�
 
 [查看飞书使用说明](https://kocotree.feishu.cn/wiki/XNiMw4uJRieoA0kNPhycOXrrnXg) · [查看所有发布版本](https://github.com/ggc0214/floating-link-dock/releases)
 
+## 从源码运行工作场景版
+
+在 Windows 或 Mac 安装 `requirements.txt` 中的依赖后，运行 `python launcher_scenes.py`。Windows 使用 `FloatingLinkDockScenes.spec` 打包。Apple Silicon 的构建步骤见 [Mac 构建说明](README-MAC.md)。常用网址版的入口是 `launcher.py`。
+
 ## Windows 常用网址版
 
 ### 功能

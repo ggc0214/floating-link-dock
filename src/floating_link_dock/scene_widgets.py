@@ -1,3 +1,4 @@
+import sys
 import tkinter as tk
 from tkinter import filedialog
 import customtkinter as ctk
@@ -87,7 +88,8 @@ class ResourceEditor(ctk.CTkFrame):
         kind = KINDS[label]
         self.hint.configure(text={'url': '粘贴网页、飞书多维表或云文档链接',
                                    'folder': '粘贴完整路径，打开时自动识别文件或文件夹',
-                                   'app': '选择 .exe、.lnk 或 .bat，也可粘贴路径'}[kind])
+                                   'app': ('选择 .app 应用，也可粘贴完整路径' if sys.platform == 'darwin'
+                                           else '选择 .exe、.lnk 或 .bat，也可粘贴路径')}[kind])
         file_button, folder_button = self.browse_buttons
         file_button.configure(text='选择应用' if kind == 'app' else '选择文件',
                               state='normal' if kind in {'folder', 'app'} else 'disabled')
@@ -95,8 +97,16 @@ class ResourceEditor(ctk.CTkFrame):
 
     def _browse(self, chooser):
         if KINDS[self.kind_menu.get()] == 'app':
-            value = chooser(parent=self, title='选择应用',
-                            filetypes=[('应用、快捷方式和批处理', ('*.exe', '*.lnk', '*.bat'))])
+            if sys.platform == 'darwin':
+                from AppKit import NSModalResponseOK, NSOpenPanel
+                panel = NSOpenPanel.openPanel()
+                panel.setTitle_('选择应用')
+                panel.setAllowedFileTypes_(['app'])
+                panel.setTreatsFilePackagesAsDirectories_(False)
+                value = panel.URL().path() if panel.runModal() == NSModalResponseOK else ''
+            else:
+                value = chooser(parent=self, title='选择应用',
+                                filetypes=[('应用、快捷方式和批处理', ('*.exe', '*.lnk', '*.bat'))])
         else:
             value = chooser(parent=self, title='选择共享目录或本地目标')
         if value:

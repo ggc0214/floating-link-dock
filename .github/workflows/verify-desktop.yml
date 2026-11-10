@@ -1,0 +1,57 @@
+name: Verify desktop apps
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-2025
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install -r requirements-dev.txt
+      - run: python -m pytest -q
+
+  macos:
+    runs-on: macos-26
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+          architecture: arm64
+      - run: python -m pip install -r requirements-dev.txt
+      - run: PYTHON=python bash scripts/build_macos.sh --scenes
+      - name: Launch the packaged work scenes app
+        shell: bash
+        run: |
+          open -n dist/macos-scenes-arm64/FloatingLinkDockScenes.app
+          python - <<'PY'
+          from pathlib import Path
+          import json
+          import time
+          from AppKit import NSRunningApplication
+
+          root = Path.home() / 'Library/Application Support/FloatingLinkDockScenes'
+          identifier = 'cn.floatinglinkdock.scenes'
+          for _ in range(30):
+              apps = NSRunningApplication.runningApplicationsWithBundleIdentifier_(identifier)
+              if apps and (root / 'scenes.json').is_file():
+                  assert json.loads((root / 'scenes.json').read_text())['version'] == 2
+                  assert not (root / 'errors.log').exists()
+                  for app in apps:
+                      app.terminate()
+                  break
+              time.sleep(1)
+          else:
+              log = root / 'errors.log'
+              raise SystemExit(log.read_text() if log.exists() else 'Packaged app did not initialize')
+          PY

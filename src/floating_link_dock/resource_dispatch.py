@@ -9,7 +9,7 @@ import threading
 from time import monotonic
 from uuid import uuid4
 
-from .scene_models import ResourceDraft, validate_resource
+from .scene_models import FILE_TYPES, ResourceDraft, validate_resource
 
 
 @dataclass(frozen=True)
@@ -57,6 +57,30 @@ def open_windows_path(item):
     elif not S_ISDIR(mode):
         raise ValueError('此路径不是可打开的文件或文件夹')
     os.startfile(draft.target)
+
+
+def open_macos_path(item):
+    draft = validate_resource(ResourceDraft(item.kind, item.name, item.target, item.auto_open))
+    try:
+        path = Path(draft.target).resolve(strict=True)
+        mode = path.stat().st_mode
+    except (OSError, RuntimeError) as exc:
+        raise OSError('无法访问路径，请检查文件、应用或 Finder 中的 NAS 连接') from exc
+
+    arguments = [str(path)]
+    if draft.kind == 'app':
+        if path.suffix.lower() != '.app' or not S_ISDIR(mode) or not (path / 'Contents/Info.plist').is_file():
+            raise ValueError('请选择有效的 .app 应用')
+    elif S_ISDIR(mode) and draft.kind == 'folder' and path.suffix.lower() != '.app':
+        arguments = ['-a', 'Finder', str(path)]
+    elif (not S_ISREG(mode) or Path(draft.target).suffix.lower() not in FILE_TYPES
+          or path.suffix.lower() not in FILE_TYPES):
+        raise ValueError('请选择可打开的文档、图片或文件夹，应用请用「应用」类型')
+
+    try:
+        subprocess.run(['/usr/bin/open', *arguments], check=True, capture_output=True, timeout=8)
+    except (OSError, subprocess.SubprocessError) as exc:
+        raise OSError('macOS 无法打开此项目，请检查系统关联、权限或应用是否可用') from exc
 
 
 class ResourceDispatcher:
