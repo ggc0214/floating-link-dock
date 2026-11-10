@@ -1,0 +1,72 @@
+name: Verify desktop apps
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-2025
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install -r requirements-dev.txt
+      - run: python -m pytest -q --ignore=tests/test_scene_icons.py
+      - name: Verify both app icons in a fresh Tk process
+        run: python -m pytest -q tests/test_scene_icons.py
+
+  macos:
+    runs-on: macos-26
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - name: Set up Apple Silicon Python and Tk
+        run: |
+          brew install python@3.13 python-tk@3.13
+          "$(brew --prefix python@3.13)/bin/python3.13" -m venv .venv
+          .venv/bin/python -m pip install -r requirements-dev.txt
+      - run: PYTHON=.venv/bin/python bash scripts/build_macos.sh --scenes
+      - run: PYTHON=.venv/bin/python bash scripts/build_macos.sh
+      - name: Launch both packaged apps
+        shell: bash
+        run: |
+          .venv/bin/python - <<'PY'
+          from pathlib import Path
+          import json
+          import subprocess
+          import time
+          from AppKit import NSRunningApplication
+
+          support = Path.home() / 'Library/Application Support'
+          packages = (
+              ('cn.floatinglinkdock.scenes', 'dist/macos-scenes-arm64/FloatingLinkDockScenes.app',
+               support / 'FloatingLinkDockScenes', 'scenes.json', 2),
+              ('cn.floatinglinkdock.app', 'dist/macos-arm64/FloatingLinkDock.app',
+               support / 'FloatingLinkDock', 'settings.json', 1),
+          )
+          try:
+              for identifier, bundle, root, filename, _ in packages:
+                  subprocess.run(['/usr/bin/open', '-n', bundle], check=True)
+                  for _ in range(30):
+                      if (NSRunningApplication.runningApplicationsWithBundleIdentifier_(identifier)
+                              and (root / filename).is_file()):
+                          break
+                      time.sleep(1)
+                  else:
+                      raise SystemExit(f'{identifier} did not initialize')
+              time.sleep(2)
+              for identifier, _, root, filename, version in packages:
+                  assert NSRunningApplication.runningApplicationsWithBundleIdentifier_(identifier), identifier
+                  assert not (root / 'errors.log').exists(), identifier
+                  assert json.loads((root / filename).read_text())['version'] == version
+          finally:
+              for identifier, *_ in packages:
+                  for app in NSRunningApplication.runningApplicationsWithBundleIdentifier_(identifier):
+                      app.terminate()
+          PY

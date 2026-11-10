@@ -8,6 +8,7 @@ __pycache__/
 .venv-macos/
 .test-mac*/
 assets/app-macos.icns
+assets/scenes-macos.icns
 .tk-test-runtime/
 delivery/
 venv/

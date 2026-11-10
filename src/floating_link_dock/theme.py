@@ -17,3 +17,4 @@ PANEL_WIDTH = 376
 PANEL_HEIGHT = 520
 RADIUS = 18
 FONT = "PingFang SC" if sys.platform == 'darwin' else "Microsoft YaHei UI"
+SCENE_FONT = "PingFang SC" if sys.platform == 'darwin' else "Microsoft YaHei"

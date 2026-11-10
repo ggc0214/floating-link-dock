@@ -5,4 +5,4 @@ if [[ "$(uname -s)" != "Darwin" || "$(uname -m)" != "arm64" ]]; then
   exit 2
 fi
 cd "$(dirname "$0")/.."
-exec "${PYTHON:-python3}" scripts/build_macos.py
+exec "${PYTHON:-python3}" scripts/build_macos.py "$@"

@@ -12,7 +12,7 @@ from .platform_integration import installed_browsers
 
 class TileBoard(ctk.CTkFrame):
     def __init__(self, master, links, *, on_open, on_edit, on_delete, on_position,
-                 on_open_browser=None):
+                 on_open_browser=None, font_family=theme.FONT):
         super().__init__(master, fg_color="transparent")
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(0, weight=1)
@@ -43,11 +43,11 @@ class TileBoard(ctk.CTkFrame):
             tile.pack_propagate(False)
             icon = ctk.CTkLabel(tile, text=link.name[:1].upper(), width=28, height=28,
                                 corner_radius=10, fg_color=theme.SURFACE,
-                                text_color=theme.TEXT, font=(theme.FONT, 14, "bold"))
+                                text_color=theme.TEXT, font=(font_family, 14, "bold"))
             icon.pack(pady=(10, 2))
             title = ctk.CTkLabel(tile, text=link.name, width=70, height=28,
                                  wraplength=68, text_color=theme.TEXT,
-                                 font=(theme.FONT, 10, "bold"))
+                                 font=(font_family, 10, "bold"))
             title.pack(pady=(0, 6))
             x, y = link.x or 0, link.y or 0
             item = self.canvas.create_window(x * self._scale, y * self._scale,
