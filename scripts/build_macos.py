@@ -42,7 +42,7 @@ def main():
     scenes = parser.parse_args().scenes
     check_host()
     # The tests include Tk: run from a logged-in desktop, not a headless SSH job.
-    tests = sorted(str(path.relative_to(ROOT)) for path in (ROOT / 'tests').glob('test_macos_*.py')) if scenes else []
+    tests = sorted(str(path.relative_to(ROOT)) for path in (ROOT / 'tests').glob('test_macos_*.py'))
     run([sys.executable, '-m', 'pytest', '-q', '--basetemp=.test-macos-build', *tests])
     name = 'FloatingLinkDockScenes' if scenes else 'FloatingLinkDock'
     output_name = 'macos-scenes-arm64' if scenes else 'macos-arm64'

@@ -30,28 +30,41 @@ jobs:
           "$(brew --prefix python@3.13)/bin/python3.13" -m venv .venv
           .venv/bin/python -m pip install -r requirements-dev.txt
       - run: PYTHON=.venv/bin/python bash scripts/build_macos.sh --scenes
-      - name: Launch the packaged work scenes app
+      - run: PYTHON=.venv/bin/python bash scripts/build_macos.sh
+      - name: Launch both packaged apps
         shell: bash
         run: |
-          open -n dist/macos-scenes-arm64/FloatingLinkDockScenes.app
           .venv/bin/python - <<'PY'
           from pathlib import Path
           import json
+          import subprocess
           import time
           from AppKit import NSRunningApplication
 
-          root = Path.home() / 'Library/Application Support/FloatingLinkDockScenes'
-          identifier = 'cn.floatinglinkdock.scenes'
-          for _ in range(30):
-              apps = NSRunningApplication.runningApplicationsWithBundleIdentifier_(identifier)
-              if apps and (root / 'scenes.json').is_file():
-                  assert json.loads((root / 'scenes.json').read_text())['version'] == 2
-                  assert not (root / 'errors.log').exists()
-                  for app in apps:
+          support = Path.home() / 'Library/Application Support'
+          packages = (
+              ('cn.floatinglinkdock.scenes', 'dist/macos-scenes-arm64/FloatingLinkDockScenes.app',
+               support / 'FloatingLinkDockScenes', 'scenes.json', 2),
+              ('cn.floatinglinkdock.app', 'dist/macos-arm64/FloatingLinkDock.app',
+               support / 'FloatingLinkDock', 'settings.json', 1),
+          )
+          try:
+              for identifier, bundle, root, filename, _ in packages:
+                  subprocess.run(['/usr/bin/open', '-n', bundle], check=True)
+                  for _ in range(30):
+                      if (NSRunningApplication.runningApplicationsWithBundleIdentifier_(identifier)
+                              and (root / filename).is_file()):
+                          break
+                      time.sleep(1)
+                  else:
+                      raise SystemExit(f'{identifier} did not initialize')
+              time.sleep(2)
+              for identifier, _, root, filename, version in packages:
+                  assert NSRunningApplication.runningApplicationsWithBundleIdentifier_(identifier), identifier
+                  assert not (root / 'errors.log').exists(), identifier
+                  assert json.loads((root / filename).read_text())['version'] == version
+          finally:
+              for identifier, *_ in packages:
+                  for app in NSRunningApplication.runningApplicationsWithBundleIdentifier_(identifier):
                       app.terminate()
-                  break
-              time.sleep(1)
-          else:
-              log = root / 'errors.log'
-              raise SystemExit(log.read_text() if log.exists() else 'Packaged app did not initialize')
           PY
