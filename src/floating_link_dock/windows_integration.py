@@ -156,9 +156,10 @@ def open_in_browser(url: str, browser: BrowserChoice) -> None:
 
 
 class StartupManager:
-    def __init__(self, executable: Path, registry=winreg) -> None:
+    def __init__(self, executable: Path, registry=winreg, *, value_name: str = RUN_VALUE) -> None:
         self.executable = executable
         self._registry = registry
+        self._value_name = value_name
 
     @property
     def command(self) -> str:
@@ -174,7 +175,7 @@ class StartupManager:
                 0,
                 self._registry.KEY_READ,
             ) as key:
-                value, _kind = self._registry.QueryValueEx(key, RUN_VALUE)
+                value, _kind = self._registry.QueryValueEx(key, self._value_name)
             return value == self.command
         except FileNotFoundError:
             return False
@@ -191,11 +192,11 @@ class StartupManager:
             ) as key:
                 if enabled:
                     self._registry.SetValueEx(
-                        key, RUN_VALUE, 0, self._registry.REG_SZ, self.command
+                        key, self._value_name, 0, self._registry.REG_SZ, self.command
                     )
                 else:
                     try:
-                        self._registry.DeleteValue(key, RUN_VALUE)
+                        self._registry.DeleteValue(key, self._value_name)
                     except FileNotFoundError:
                         pass
         except OSError as exc:
