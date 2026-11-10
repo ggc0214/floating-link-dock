@@ -17,7 +17,9 @@ jobs:
         with:
           python-version: '3.13'
       - run: python -m pip install -r requirements-dev.txt
-      - run: python -m pytest -q
+      - run: python -m pytest -q --ignore=tests/test_scene_icons.py
+      - name: Verify both app icons in a fresh Tk process
+        run: python -m pytest -q tests/test_scene_icons.py
 
   macos:
     runs-on: macos-26
