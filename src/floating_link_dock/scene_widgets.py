@@ -20,6 +20,10 @@ class SceneBoard(TileBoard):
         for _, tile, scene in self._items.values():
             badge, title = tile.winfo_children()
             badge.configure(text=f'{len(scene.items)} 项', width=46, font=(theme.SCENE_FONT, 11, 'bold'))
+            badge.configure(width=36, height=20, font=(theme.SCENE_FONT, 10))
+            badge.pack_configure(pady=(6, 3))
+            title.configure(height=40, font=(theme.SCENE_FONT, 14, 'bold'))
+            title.pack_configure(pady=(0, 6))
             if len(scene.name) > 12:
                 title.configure(text=f'{scene.name[:11]}…')
         if not scenes:
@@ -125,7 +129,12 @@ class ResourceBoard(TileBoard):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, font_family=theme.SCENE_FONT, **kwargs)
         for _, tile, item in self._items.values():
-            tile.winfo_children()[0].configure(text=BADGES[item.kind])
+            badge, title = tile.winfo_children()
+            badge.configure(text=BADGES[item.kind])
+            badge.configure(width=30, height=20, font=(theme.SCENE_FONT, 10))
+            badge.pack_configure(pady=(6, 3))
+            title.configure(height=40, font=(theme.SCENE_FONT, 14, 'bold'))
+            title.pack_configure(pady=(0, 6))
 
     def _menu(self, key, event):
         item = self._items[key][2]

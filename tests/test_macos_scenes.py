@@ -10,6 +10,38 @@ from floating_link_dock.macos_lifecycle import StartupManager
 from floating_link_dock.scene_store import SceneStore
 
 
+@pytest.mark.skipif(sys.platform != 'darwin', reason='requires native PingFang layout')
+def test_mac_tile_names_fit_above_smaller_type_and_count_labels(tmp_path):
+    from floating_link_dock.scene_controller import SceneController
+    from floating_link_dock.scene_window import build_scenes_app
+    from test_app_smoke import FakeStartupManager
+
+    store = SceneStore(tmp_path / 'scenes', tmp_path / 'classic')
+    controller = SceneController(store)
+    controller.initialize()
+    for draft in [models.ResourceDraft('url', '聚水潭开放平台', 'https://example.com'),
+                  models.ResourceDraft('app', '微信', '/Applications/WeChat.app'),
+                  models.ResourceDraft('folder', '工作资料', '/Volumes/团队资料')]:
+        controller.add_resource(draft)
+    controller.duplicate_scene('质检报告同步')
+    app = build_scenes_app(store, FakeStartupManager())
+    try:
+        app.show_panel()
+        for section in ('常用网址', '工作场景'):
+            app._select_section(section)
+            app.update()
+            assert app.board._items
+            for _, tile, entry in app.board._items.values():
+                badge, title = tile.winfo_children()
+                assert title.cget('text') == entry.name
+                assert title.cget('font') == ('PingFang SC', 14, 'bold')
+                assert badge.cget('font') == ('PingFang SC', 10)
+                assert title._label.winfo_reqheight() <= title.winfo_height()
+                assert title.winfo_y() + title.winfo_height() <= tile.winfo_height()
+    finally:
+        app.destroy()
+
+
 def test_scene_data_and_login_item_are_independent_on_mac(tmp_path, monkeypatch):
     monkeypatch.setattr('floating_link_dock.storage.sys', SimpleNamespace(platform='darwin'))
     monkeypatch.setattr(Path, 'home', lambda: tmp_path)
