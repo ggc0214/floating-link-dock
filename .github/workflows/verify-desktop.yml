@@ -70,3 +70,10 @@ jobs:
                   for app in NSRunningApplication.runningApplicationsWithBundleIdentifier_(identifier):
                       app.terminate()
           PY
+      - name: Save the Apple Silicon work scenes app
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-work-scenes-large-names
+          path: dist/macos-scenes-arm64/FloatingLinkDockScenes-macos-arm64.zip
+          if-no-files-found: error
+          retention-days: 7
